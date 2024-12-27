@@ -156,67 +156,35 @@ input[type="url"] {
 }
 
 .placeholder-container {
-    margin-bottom: 40px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .placeholder-title {
-    padding: 20px;
-    font-size: 1.2em;
+    font-size: 18px;
     font-weight: bold;
-    background-color: #2c3e50;
-    color: white;
-    text-align: center;
+    margin-bottom: 10px;
+    color: #333;
 }
 
 .placeholder-content {
-    min-height: 500px;
-    padding: 20px;
-    border: 2px dashed #ccc;
-    margin: 20px;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.placeholder-content:hover {
-    background-color: #f5f5f5;
-}
-
-.placeholder-content::before {
-    content: 'Content will be loaded here';
-    color: #999;
-    font-size: 1.1em;
-    position: absolute;
+    margin-top: 10px;
 }
 
 .placeholder-content iframe {
     width: 100%;
-    height: 100%;
-    border: none;
-    position: relative;
-    z-index: 1;
+    height: 500px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 
 .text-content {
-    padding: 30px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: #333;
-    min-height: 200px;
-    border: 2px dashed #ccc;
-    margin: 20px;
+    padding: 20px;
+    background-color: white;
     border-radius: 4px;
-    transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .text-content:empty::before {
@@ -227,4 +195,252 @@ input[type="url"] {
 
 .text-content:hover {
     background-color: #f5f5f5;
+}
+
+/* Add these styles to your existing CSS */
+.button-group {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.button-group button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+.edit-btn {
+    background-color: #3498db;
+    color: white;
+    display: block;
+}
+
+.save-btn {
+    background-color: #2ecc71;
+    color: white;
+    display: none;
+}
+
+.button-group button:hover {
+    opacity: 0.9;
+}
+
+/* Add styles for the form groups */
+.form-group {
+    background-color: #f8f9fa;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+input[disabled], textarea[disabled] {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+/* Add styles for formatted content */
+.formatted-content {
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    min-height: 50px;
+}
+
+.formatted-content:empty {
+    display: block; /* Always show the container */
+    background-color: #f8f9fa;
+}
+
+.formatted-content:empty::before {
+    content: 'No content available';
+    color: #6c757d;
+    font-style: italic;
+}
+
+.formatted-content ul, 
+.formatted-content ol {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.formatted-content li {
+    margin-bottom: 5px;
+}
+
+.formatted-content p {
+    margin-bottom: 15px;
+}
+
+.formatted-content strong {
+    font-weight: bold;
+}
+
+.formatted-content em {
+    font-style: italic;
+}
+
+.formatted-content h1,
+.formatted-content h2,
+.formatted-content h3,
+.formatted-content h4 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.formatted-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.formatted-content table td,
+.formatted-content table th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.formatted-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+}
+
+/* Add these styles */
+.tox-tinymce {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    min-height: 300px !important;
+}
+
+.form-group textarea {
+    width: 100%;
+    min-height: 300px;
+}
+
+/* Add these styles for the Quill editor */
+.ql-editor {
+    min-height: 200px;
+}
+
+.ql-container {
+    font-size: 16px;
+}
+
+/* Style for disabled editor */
+.quill-disabled .ql-toolbar {
+    display: none;
+}
+
+.quill-disabled .ql-container {
+    border: 1px solid #ccc;
+}
+
+.text-content {
+    min-height: 100px;
+    padding: 20px;
+    background-color: white;
+}
+
+.text-content:empty::before {
+    content: 'No content available';
+    color: #999;
+    font-style: italic;
+}
+
+#text-content-5 {
+    display: block !important; /* Force display */
+    width: 100%;
+    margin-top: 15px;
+}
+
+/* Style the rich text content */
+#text-content-5 p {
+    margin-bottom: 1em;
+}
+
+#text-content-5 ul,
+#text-content-5 ol {
+    margin-left: 20px;
+    margin-bottom: 1em;
+}
+
+#text-content-5 li {
+    margin-bottom: 0.5em;
+}
+
+#degoudse-text-content-5,
+#baloise-text-content-5 {
+    margin-top: 15px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Style the rich text content */
+.formatted-content p {
+    margin-bottom: 1em;
+}
+
+.formatted-content ul,
+.formatted-content ol {
+    margin-left: 20px;
+    margin-bottom: 1em;
+}
+
+.formatted-content li {
+    margin-bottom: 0.5em;
+}
+
+.content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.section-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.content-frame {
+    margin-top: 10px;
+}
+
+.rich-text-content {
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    min-height: 100px;
+}
+
+h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2em;
 } 

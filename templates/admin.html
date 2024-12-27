@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Page</title>
+    <title>Admin Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Quill CSS and JS only on admin page -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 </head>
 <body>
     <nav>
@@ -13,121 +16,81 @@
         <a href="{{ url_for('baloise') }}">Baloise</a>
     </nav>
 
-    <!-- De Goudse Section -->
-    <div class="section">
-        <h2>De Goudse Settings</h2>
-        
-        <!-- De Goudse subsections -->
-        <div class="subsection">
-            <h3>Subsection 1</h3>
-            <div class="input-group">
-                <label for="degoudse-title-1">Title:</label>
-                <input type="text" id="degoudse-title-1" name="degoudse-title-1">
-                <label for="degoudse-link-1">Hyperlink:</label>
-                <input type="url" id="degoudse-link-1" name="degoudse-link-1" placeholder="https://example.com">
-            </div>
+    <div class="admin-container">
+        <!-- De Goudse Section -->
+        <div class="section">
+            <h2>De Goudse Settings</h2>
+            <form id="degoudse-form">
+                <!-- Sections 1-4 -->
+                {% for i in range(1, 5) %}
+                <div class="form-group">
+                    <h3>Section {{ i }}</h3>
+                    <div class="input-group">
+                        <label for="degoudse-title-{{ i }}">Title:</label>
+                        <input type="text" id="degoudse-title-{{ i }}" name="degoudse-title-{{ i }}" disabled>
+                    </div>
+                    <div class="input-group">
+                        <label for="degoudse-link-{{ i }}">Link:</label>
+                        <input type="text" id="degoudse-link-{{ i }}" name="degoudse-link-{{ i }}" disabled>
+                    </div>
+                    <!-- Add edit/save buttons for each section -->
+                    <div class="button-group">
+                        <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit({{ i }})">Edit</button>
+                        <button type="button" class="save-btn" onclick="saveDeGoudseSettings({{ i }})" style="display: none;">Save</button>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Section 5 (Rich Text Content) -->
+                <div class="form-group">
+                    <h3>Additional Information</h3>
+                    <div id="degoudse-editor"></div>
+                    <div class="button-group">
+                        <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit(5)">Edit</button>
+                        <button type="button" class="save-btn" onclick="saveDeGoudseSettings(5)" style="display: none;">Save</button>
+                    </div>
+                </div>
+            </form>
         </div>
 
-        <!-- Subsection 2 -->
-        <div class="subsection">
-            <h3>Subsection 2</h3>
-            <div class="input-group">
-                <label for="degoudse-title-2">Title:</label>
-                <input type="text" id="degoudse-title-2" name="degoudse-title-2">
-                <label for="degoudse-link-2">Hyperlink:</label>
-                <input type="url" id="degoudse-link-2" name="degoudse-link-2" placeholder="https://example.com">
-            </div>
+        <!-- Baloise Section -->
+        <div class="section">
+            <h2>Baloise Settings</h2>
+            <form id="baloise-form">
+                <!-- Sections 1-4 -->
+                {% for i in range(1, 5) %}
+                <div class="form-group">
+                    <h3>Section {{ i }}</h3>
+                    <div class="input-group">
+                        <label for="baloise-title-{{ i }}">Title:</label>
+                        <input type="text" id="baloise-title-{{ i }}" name="baloise-title-{{ i }}" disabled>
+                    </div>
+                    <div class="input-group">
+                        <label for="baloise-link-{{ i }}">Link:</label>
+                        <input type="text" id="baloise-link-{{ i }}" name="baloise-link-{{ i }}" disabled>
+                    </div>
+                    <!-- Add edit/save buttons for each section -->
+                    <div class="button-group">
+                        <button type="button" class="edit-btn" onclick="toggleBaloiseEdit({{ i }})">Edit</button>
+                        <button type="button" class="save-btn" onclick="saveBaloiseSettings({{ i }})" style="display: none;">Save</button>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Section 5 (Rich Text Content) -->
+                <div class="form-group">
+                    <h3>Additional Information</h3>
+                    <div id="baloise-editor"></div>
+                    <div class="button-group">
+                        <button type="button" class="edit-btn" onclick="toggleBaloiseEdit(5)">Edit</button>
+                        <button type="button" class="save-btn" onclick="saveBaloiseSettings(5)" style="display: none;">Save</button>
+                    </div>
+                </div>
+            </form>
         </div>
-
-        <!-- Subsection 3 -->
-        <div class="subsection">
-            <h3>Subsection 3</h3>
-            <div class="input-group">
-                <label for="degoudse-title-3">Title:</label>
-                <input type="text" id="degoudse-title-3" name="degoudse-title-3">
-                <label for="degoudse-link-3">Hyperlink:</label>
-                <input type="url" id="degoudse-link-3" name="degoudse-link-3" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <!-- Subsection 4 -->
-        <div class="subsection">
-            <h3>Subsection 4</h3>
-            <div class="input-group">
-                <label for="degoudse-title-4">Title:</label>
-                <input type="text" id="degoudse-title-4" name="degoudse-title-4">
-                <label for="degoudse-link-4">Hyperlink:</label>
-                <input type="url" id="degoudse-link-4" name="degoudse-link-4" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <!-- Subsection 5 -->
-        <div class="subsection">
-            <h3>Subsection 5</h3>
-            <div class="input-group">
-                <label for="degoudse-text-5">Content:</label>
-                <textarea id="degoudse-text-5" name="degoudse-text-5" rows="4"></textarea>
-            </div>
-        </div>
-
-        <button onclick="saveDeGoudseSettings()" class="save-button">Save De Goudse Settings</button>
     </div>
 
-    <!-- Baloise Section -->
-    <div class="section">
-        <h2>Baloise Settings</h2>
-        
-        <div class="subsection">
-            <h3>Subsection 1</h3>
-            <div class="input-group">
-                <label for="baloise-title-1">Title:</label>
-                <input type="text" id="baloise-title-1" name="baloise-title-1">
-                <label for="baloise-link-1">Hyperlink:</label>
-                <input type="url" id="baloise-link-1" name="baloise-link-1" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <div class="subsection">
-            <h3>Subsection 2</h3>
-            <div class="input-group">
-                <label for="baloise-title-2">Title:</label>
-                <input type="text" id="baloise-title-2" name="baloise-title-2">
-                <label for="baloise-link-2">Hyperlink:</label>
-                <input type="url" id="baloise-link-2" name="baloise-link-2" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <div class="subsection">
-            <h3>Subsection 3</h3>
-            <div class="input-group">
-                <label for="baloise-title-3">Title:</label>
-                <input type="text" id="baloise-title-3" name="baloise-title-3">
-                <label for="baloise-link-3">Hyperlink:</label>
-                <input type="url" id="baloise-link-3" name="baloise-link-3" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <div class="subsection">
-            <h3>Subsection 4</h3>
-            <div class="input-group">
-                <label for="baloise-title-4">Title:</label>
-                <input type="text" id="baloise-title-4" name="baloise-title-4">
-                <label for="baloise-link-4">Hyperlink:</label>
-                <input type="url" id="baloise-link-4" name="baloise-link-4" placeholder="https://example.com">
-            </div>
-        </div>
-
-        <div class="subsection">
-            <h3>Subsection 5</h3>
-            <div class="input-group">
-                <label for="baloise-text-5">Content:</label>
-                <textarea id="baloise-text-5" name="baloise-text-5" rows="4"></textarea>
-            </div>
-        </div>
-
-        <button onclick="saveBaloiseSettings()" class="save-button">Save Baloise Settings</button>
-    </div>
-
+    <!-- Your custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
