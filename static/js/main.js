@@ -506,3 +506,57 @@ function handleLinkUpdate(company, sectionNumber) {
         .catch(error => console.error('Error updating settings:', error));
     });
 } 
+
+function initializeSlider() {
+    console.log('Initializing slider...');
+    
+    const sliderToggle = document.getElementById('sliderToggle');
+    const partnerSlider = document.getElementById('partnerSlider');
+    
+    if (!sliderToggle || !partnerSlider) {
+        console.error('Required elements not found');
+        return;
+    }
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'slider-overlay';
+    document.body.appendChild(overlay);
+
+    function openSlider() {
+        partnerSlider.classList.add('active');
+        overlay.classList.add('active');
+    }
+
+    function closeSlider() {
+        partnerSlider.classList.remove('active');
+        overlay.classList.remove('active');
+    }
+
+    // Toggle slider
+    sliderToggle.addEventListener('click', () => {
+        console.log('Slider toggle clicked');
+        openSlider();
+    });
+
+    // Close slider
+    const closeButton = document.querySelector('.close-slider');
+    if (closeButton) {
+        closeButton.addEventListener('click', closeSlider);
+    }
+
+    // Close on overlay click
+    overlay.addEventListener('click', closeSlider);
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSlider();
+        }
+    });
+}
+
+// Initialize slider when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSlider();
+}); 
