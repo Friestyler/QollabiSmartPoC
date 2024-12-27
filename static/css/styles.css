@@ -9,11 +9,108 @@ body {
 
 /* Navigation styling */
 nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 20px;
     background-color: #2c3e50;
     margin-bottom: 30px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: center;
+}
+
+.nav-links {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
+}
+
+.nav-icons {
+    margin-left: auto;
+    padding-right: 0;
+}
+
+/* Slider toggle button */
+.slider-toggle {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.slider-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.slider-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
+.slider-toggle svg path {
+    fill: white;
+}
+
+/* Partner Slider */
+.partner-slider {
+    position: fixed;
+    top: 0;
+    right: -33.333%;
+    width: 33.333%;
+    height: 100%;
+    background-color: white;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    transition: right 0.3s ease-in-out;
+    z-index: 9999;
+}
+
+.partner-slider.active {
+    right: 0;
+}
+
+/* Slider Header */
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #2c3e50;
+    color: white;
+}
+
+.slider-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.close-slider {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.close-slider:hover {
+    color: #bdc3c7;
+}
+
+.slider-content {
+    padding: 20px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
 }
 
 nav a {
@@ -568,5 +665,47 @@ h3 {
     width: 100%;
     height: 800px;
     border: none;
+    border-radius: 4px;
+} 
+
+/* Overlay */
+.slider-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    display: none;
+}
+
+.slider-overlay.active {
+    display: block;
+} 
+
+/* Add these styles after your existing nav styles */
+.nav-icons {
+    margin-left: auto;
+}
+
+.slider-toggle {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slider-toggle svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
+}
+
+.slider-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 } 
