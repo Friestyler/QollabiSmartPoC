@@ -14,42 +14,53 @@
     <div class="content-container">
         <!-- Section 1 -->
         <div class="section-container">
-            <h3 id="title-1">Title will appear here</h3>
-            <div class="content-frame">
-                <iframe id="frame-1" frameborder="0"></iframe>
+            <h3 id="degoudse-title-1">Title will appear here</h3>
+            <div class="content-frame" id="degoudse-content-1">
+                <iframe 
+                    id="degoudse-frame-1" 
+                    frameborder="0"
+                    allowfullscreen
+                    loading="lazy"
+                    style="display: none;"
+                ></iframe>
             </div>
         </div>
 
         <!-- Section 2 -->
         <div class="section-container">
-            <h3 id="title-2">Title will appear here</h3>
+            <h3 id="degoudse-title-2">Title will appear here</h3>
             <div class="content-frame">
-                <iframe id="frame-2" frameborder="0"></iframe>
+                <iframe id="degoudse-frame-2" frameborder="0"></iframe>
             </div>
         </div>
 
         <!-- Section 3 -->
         <div class="section-container">
-            <h3 id="title-3">Title will appear here</h3>
+            <h3 id="degoudse-title-3">Title will appear here</h3>
             <div class="content-frame">
-                <iframe id="frame-3" frameborder="0"></iframe>
+                <iframe id="degoudse-frame-3" frameborder="0"></iframe>
             </div>
         </div>
 
         <!-- Section 4 -->
         <div class="section-container">
-            <h3 id="title-4">Title will appear here</h3>
+            <h3 id="degoudse-title-4">Title will appear here</h3>
             <div class="content-frame">
-                <iframe id="frame-4" frameborder="0"></iframe>
+                <iframe id="degoudse-frame-4" frameborder="0"></iframe>
             </div>
         </div>
 
-        <!-- Section 5 (Rich Text Content) -->
+        <!-- Section 5 -->
         <div class="section-container">
             <h3>Additional Information</h3>
-            <div id="content-5" class="rich-text-content"></div>
+            <div id="degoudse-text-content-5" class="rich-text-content"></div>
         </div>
     </div>
+
+    <!-- Add this temporarily for testing -->
+    <button onclick="document.getElementById('degoudse-content-1').innerHTML = createEmptyState()">
+        Test Empty State
+    </button>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -60,8 +71,8 @@
                     
                     // Handle sections 1-4
                     for(let i = 0; i < 4; i++) {
-                        const titleElement = document.getElementById(`title-${i+1}`);
-                        const frameElement = document.getElementById(`frame-${i+1}`);
+                        const titleElement = document.getElementById(`degoudse-title-${i+1}`);
+                        const frameElement = document.getElementById(`degoudse-frame-${i+1}`);
                         
                         if (data[i] && titleElement) {
                             titleElement.textContent = data[i].title || 'No title set';
@@ -70,7 +81,7 @@
                     }
 
                     // Handle section 5 (rich text)
-                    const contentElement = document.getElementById('content-5');
+                    const contentElement = document.getElementById('degoudse-text-content-5');
                     if (data[4] && contentElement) {
                         contentElement.innerHTML = data[4].content || '';
                     }

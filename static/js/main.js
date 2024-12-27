@@ -54,6 +54,12 @@ function initializeAdminPage() {
         baloiseQuill.disable();
     }
 
+    // Add link update handlers for both companies
+    for (let i = 1; i <= 4; i++) {
+        handleLinkUpdate('degoudse', i);
+        handleLinkUpdate('baloise', i);
+    }
+
     // Load admin content
     loadAdminContent();
 }
@@ -209,12 +215,7 @@ function saveDeGoudseSettings(section) {
 }
 
 function saveBaloiseSettings(section) {
-    console.log('Saving Baloise section:', section);
     console.log('Starting save for Baloise section:', section);
-    const form = document.getElementById('baloise-form');
-    const sectionDiv = form.children[section - 1];
-    const editBtn = sectionDiv.querySelector('.edit-btn');
-    const saveBtn = sectionDiv.querySelector('.save-btn');
     
     let sectionData = {
         section_number: section,
@@ -224,13 +225,15 @@ function saveBaloiseSettings(section) {
     };
 
     if (section === 5) {
+        // Handle rich text content
         sectionData.content = baloiseQuill ? baloiseQuill.root.innerHTML : '';
+        console.log('Saving Baloise rich text:', sectionData.content);
     } else {
+        // Handle regular section
         sectionData.title = document.getElementById(`baloise-title-${section}`).value;
         sectionData.link = document.getElementById(`baloise-link-${section}`).value;
+        console.log('Saving Baloise section data:', sectionData);
     }
-
-    console.log('Saving Baloise data:', sectionData);
 
     fetch('/save_baloise_settings', {
         method: 'POST',
@@ -242,34 +245,60 @@ function saveBaloiseSettings(section) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            alert('Settings saved successfully!');
+            console.log('Baloise settings saved successfully');
+            
+            // Disable inputs after saving
             if (section === 5) {
                 baloiseQuill.disable();
             } else {
+                const form = document.getElementById('baloise-form');
+                const sectionDiv = form.children[section - 1];
                 const inputs = sectionDiv.querySelectorAll('input[type="text"]');
                 inputs.forEach(input => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f5f5f5';
                 });
             }
-            // Toggle buttons back
+
+            // Toggle buttons
+            const sectionDiv = document.getElementById('baloise-form').children[section - 1];
+            const editBtn = sectionDiv.querySelector('.edit-btn');
+            const saveBtn = sectionDiv.querySelector('.save-btn');
             if (editBtn) editBtn.style.display = 'block';
             if (saveBtn) saveBtn.style.display = 'none';
-            
-            // Reload the admin content
+
+            // Reload the content
             loadAdminContent();
         } else {
+            console.error('Error saving Baloise settings:', data.message);
             alert('Error saving settings: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Error saving Baloise settings:', error);
         alert('Error saving settings');
     });
 }
 
+function createEmptyState() {
+    console.log('Creating empty state');
+    const emptyState = `
+        <div class="empty-state">
+            <div class="empty-state-content">
+                <div class="empty-state-icon">📊</div>
+                <h3>Ask the Qollabi Team for new Dashboard</h3>
+                <a href="mailto:support@qollabi.com" class="contact-button">
+                    Contact support@qollabi.com
+                </a>
+            </div>
+        </div>
+    `;
+    console.log('Empty state HTML:', emptyState);
+    return emptyState;
+}
+
 function loadDeGoudseContent() {
-    console.log('Starting loadDeGoudseContent');
+    console.log('Loading De Goudse content');
     fetch('/get_degoudse_settings')
         .then(response => response.json())
         .then(data => {
@@ -278,77 +307,105 @@ function loadDeGoudseContent() {
             // Handle sections 1-4
             for(let i = 0; i < 4; i++) {
                 const titleElement = document.getElementById(`degoudse-title-${i+1}`);
+                const contentFrame = document.getElementById(`degoudse-content-${i+1}`);
                 const frameElement = document.getElementById(`degoudse-frame-${i+1}`);
                 
-                if (data[i] && titleElement) {
-                    titleElement.textContent = data[i].title || 'No title set';
-                    if (data[i].link) frameElement.src = data[i].link;
+                console.log(`Processing De Goudse section ${i+1}:`, {
+                    title: data[i]?.title,
+                    link: data[i]?.link,
+                    hasContentFrame: !!contentFrame,
+                    hasFrame: !!frameElement
+                });
+
+                if (contentFrame && frameElement) {
+                    if (data[i]?.link && data[i].link.trim()) {
+                        // Has valid link - show iframe
+                        console.log(`Section ${i+1}: Showing iframe`);
+                        frameElement.style.display = 'block';
+                        frameElement.src = data[i].link;
+                        contentFrame.querySelector('.empty-state')?.remove();
+                    } else {
+                        // No link - show empty state
+                        console.log(`Section ${i+1}: Showing empty state`);
+                        frameElement.style.display = 'none';
+                        contentFrame.innerHTML = createEmptyState();
+                    }
+                    
+                    if (titleElement) {
+                        titleElement.textContent = data[i]?.title || `Section ${i + 1}`;
+                    }
                 }
             }
 
-            // Handle section 5 (rich text)
+            // Handle section 5
             const contentElement = document.getElementById('degoudse-text-content-5');
-            if (data[4] && contentElement) {
-                contentElement.innerHTML = data[4].content || '';
+            if (contentElement) {
+                if (!data[4]?.content || !data[4].content.trim()) {
+                    contentElement.innerHTML = createEmptyState();
+                } else {
+                    contentElement.innerHTML = data[4].content;
+                }
             }
         })
         .catch(error => console.error('Error:', error));
 }
 
 function loadBaloiseContent() {
-    console.log('Starting loadBaloiseContent');
+    console.log('Loading Baloise content');
     fetch('/get_baloise_settings')
         .then(response => response.json())
         .then(data => {
             console.log('Received Baloise data:', data);
             
-            // Check if we have data
-            if (!data || data.length === 0) {
-                console.warn('No Baloise data received');
-                return;
-            }
-
             // Handle sections 1-4
             for(let i = 0; i < 4; i++) {
                 const titleElement = document.getElementById(`baloise-title-${i+1}`);
+                const contentFrame = document.getElementById(`baloise-content-${i+1}`);
                 const frameElement = document.getElementById(`baloise-frame-${i+1}`);
                 
-                console.log(`Looking for Baloise section ${i+1}:`, {
-                    data: data[i],
-                    titleElement: titleElement,
-                    frameElement: frameElement
+                console.log(`Processing Baloise section ${i+1}:`, {
+                    title: data[i]?.title,
+                    link: data[i]?.link,
+                    hasContentFrame: !!contentFrame,
+                    hasFrame: !!frameElement
                 });
 
-                if (data[i]) {
-                    if (titleElement) {
-                        console.log(`Setting Baloise title ${i+1} to:`, data[i].title);
-                        titleElement.textContent = data[i].title || 'No title set';
+                if (contentFrame && frameElement) {
+                    if (data[i]?.link && data[i].link.trim()) {
+                        // Has valid link - show iframe and remove empty state
+                        console.log(`Section ${i+1}: Showing iframe`);
+                        frameElement.style.display = 'block';
+                        frameElement.src = data[i].link;
+                        const existingEmptyState = contentFrame.querySelector('.empty-state');
+                        if (existingEmptyState) {
+                            existingEmptyState.remove();
+                        }
                     } else {
-                        console.warn(`Title element for Baloise section ${i+1} not found`);
+                        // No link - hide iframe and show empty state
+                        console.log(`Section ${i+1}: Showing empty state`);
+                        frameElement.style.display = 'none';
+                        if (!contentFrame.querySelector('.empty-state')) {
+                            contentFrame.innerHTML = createEmptyState();
+                        }
                     }
                     
-                    if (frameElement && data[i].link) {
-                        console.log(`Setting Baloise frame ${i+1} src to:`, data[i].link);
-                        frameElement.src = data[i].link;
+                    if (titleElement) {
+                        titleElement.textContent = data[i]?.title || `Section ${i + 1}`;
                     }
                 }
             }
 
-            // Handle section 5 (rich text)
+            // Handle section 5
             const contentElement = document.getElementById('baloise-text-content-5');
-            console.log('Looking for Baloise section 5:', {
-                data: data[4],
-                contentElement: contentElement
-            });
-            
-            if (data[4] && contentElement) {
-                console.log('Setting Baloise section 5 content:', data[4].content);
-                contentElement.innerHTML = data[4].content || '';
+            if (contentElement) {
+                if (!data[4]?.content || !data[4].content.trim()) {
+                    contentElement.innerHTML = createEmptyState();
+                } else {
+                    contentElement.innerHTML = data[4].content;
+                }
             }
         })
-        .catch(error => {
-            console.error('Error loading Baloise content:', error);
-        });
+        .catch(error => console.error('Error:', error));
 }
 
 // Add this to ensure content is loaded when the page loads
@@ -365,4 +422,82 @@ document.addEventListener('DOMContentLoaded', function() {
     if (path === '/baloise') {
         loadBaloiseContent();
     }
+});
+
+function handleIframeError(frameElement) {
+    frameElement.onerror = function() {
+        console.error('Failed to load iframe content');
+        frameElement.insertAdjacentHTML('afterend', 
+            '<div class="error-message">Failed to load content. Please try again later.</div>'
+        );
+    };
+}
+
+// Add this to your load functions
+if (frameElement) {
+    handleIframeError(frameElement);
+}
+
+function setupIframe(frameElement) {
+    if (!frameElement) return;
+
+    frameElement.onload = function() {
+        // Fade in the iframe
+        this.style.opacity = '1';
+        
+        // Try to adjust height based on content
+        try {
+            const height = frameElement.contentWindow.document.body.scrollHeight;
+            frameElement.style.height = `${height}px`;
+        } catch (e) {
+            console.log('Could not adjust iframe height (expected for cross-origin content)');
+            // Use default height from CSS
+        }
+    };
+
+    // Add error handling
+    frameElement.onerror = function() {
+        console.error('Failed to load iframe content');
+        frameElement.insertAdjacentHTML('afterend', 
+            '<div class="error-message">Failed to load content. Please try again later.</div>'
+        );
+    };
+} 
+
+window.addEventListener('error', function(e) {
+    if (e.message.includes('CORS') || e.message.includes('cross-origin')) {
+        console.log('CORS error detected - this is expected for third-party content');
+    }
 }); 
+
+// Add this function to handle real-time updates
+function handleLinkUpdate(company, sectionNumber) {
+    const linkInput = document.getElementById(`${company}-link-${sectionNumber}`);
+    const titleInput = document.getElementById(`${company}-title-${sectionNumber}`);
+    
+    if (!linkInput) return;
+
+    linkInput.addEventListener('input', function() {
+        // Automatically save when link is updated
+        const formData = new FormData();
+        formData.append('section_number', sectionNumber);
+        formData.append('title', titleInput ? titleInput.value : '');
+        formData.append('link', this.value.trim());
+
+        fetch(`/update_${company}_settings`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(`Updated ${company} section ${sectionNumber}:`, data);
+            // Reload the corresponding page content
+            if (company === 'degoudse') {
+                loadDeGoudseContent();
+            } else if (company === 'baloise') {
+                loadBaloiseContent();
+            }
+        })
+        .catch(error => console.error('Error updating settings:', error));
+    });
+} 
