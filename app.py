@@ -5,7 +5,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # PostgreSQL configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/qollabi_smart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
