@@ -319,16 +319,21 @@ function loadDeGoudseContent() {
 
                 if (contentFrame && frameElement) {
                     if (data[i]?.link && data[i].link.trim()) {
-                        // Has valid link - show iframe
+                        // Has valid link - show iframe and remove empty state
                         console.log(`Section ${i+1}: Showing iframe`);
                         frameElement.style.display = 'block';
                         frameElement.src = data[i].link;
-                        contentFrame.querySelector('.empty-state')?.remove();
+                        const existingEmptyState = contentFrame.querySelector('.empty-state');
+                        if (existingEmptyState) {
+                            existingEmptyState.remove();
+                        }
                     } else {
-                        // No link - show empty state
+                        // No link - hide iframe and show empty state
                         console.log(`Section ${i+1}: Showing empty state`);
                         frameElement.style.display = 'none';
-                        contentFrame.innerHTML = createEmptyState();
+                        if (!contentFrame.querySelector('.empty-state')) {
+                            contentFrame.innerHTML = createEmptyState();
+                        }
                     }
                     
                     if (titleElement) {

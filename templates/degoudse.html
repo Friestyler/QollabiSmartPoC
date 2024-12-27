@@ -29,24 +29,42 @@
         <!-- Section 2 -->
         <div class="section-container">
             <h3 id="degoudse-title-2">Title will appear here</h3>
-            <div class="content-frame">
-                <iframe id="degoudse-frame-2" frameborder="0"></iframe>
+            <div class="content-frame" id="degoudse-content-2">
+                <iframe 
+                    id="degoudse-frame-2" 
+                    frameborder="0"
+                    allowfullscreen
+                    loading="lazy"
+                    style="display: none;"
+                ></iframe>
             </div>
         </div>
 
         <!-- Section 3 -->
         <div class="section-container">
             <h3 id="degoudse-title-3">Title will appear here</h3>
-            <div class="content-frame">
-                <iframe id="degoudse-frame-3" frameborder="0"></iframe>
+            <div class="content-frame" id="degoudse-content-3">
+                <iframe 
+                    id="degoudse-frame-3" 
+                    frameborder="0"
+                    allowfullscreen
+                    loading="lazy"
+                    style="display: none;"
+                ></iframe>
             </div>
         </div>
 
         <!-- Section 4 -->
         <div class="section-container">
             <h3 id="degoudse-title-4">Title will appear here</h3>
-            <div class="content-frame">
-                <iframe id="degoudse-frame-4" frameborder="0"></iframe>
+            <div class="content-frame" id="degoudse-content-4">
+                <iframe 
+                    id="degoudse-frame-4" 
+                    frameborder="0"
+                    allowfullscreen
+                    loading="lazy"
+                    style="display: none;"
+                ></iframe>
             </div>
         </div>
 
@@ -57,38 +75,7 @@
         </div>
     </div>
 
-    <!-- Add this temporarily for testing -->
-    <button onclick="document.getElementById('degoudse-content-1').innerHTML = createEmptyState()">
-        Test Empty State
-    </button>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('/get_degoudse_settings')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Data received:', data);
-                    
-                    // Handle sections 1-4
-                    for(let i = 0; i < 4; i++) {
-                        const titleElement = document.getElementById(`degoudse-title-${i+1}`);
-                        const frameElement = document.getElementById(`degoudse-frame-${i+1}`);
-                        
-                        if (data[i] && titleElement) {
-                            titleElement.textContent = data[i].title || 'No title set';
-                            if (data[i].link) frameElement.src = data[i].link;
-                        }
-                    }
-
-                    // Handle section 5 (rich text)
-                    const contentElement = document.getElementById('degoudse-text-content-5');
-                    if (data[4] && contentElement) {
-                        contentElement.innerHTML = data[4].content || '';
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
 
