@@ -1,8 +1,14 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from datetime import datetime
 import os
 
+# Initialize extensions first, before creating the app
+db = SQLAlchemy()
+migrate = Migrate()
+
+# Create the Flask application
 app = Flask(__name__, static_url_path='/static', static_folder='static')
 
 # PostgreSQL configuration
@@ -12,7 +18,10 @@ if database_url and database_url.startswith('postgres://'):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+# Initialize the application with extensions
+db.init_app(app)
+migrate.init_app(app, db)
 
 # Database Models
 class DeGoudseSettings(db.Model):
@@ -220,6 +229,38 @@ def baloise():
     except Exception as e:
         print("Error in baloise route:", str(e))
         return render_template('baloise.html')
+
+@app.route('/api/degoudse/settings', methods=['GET', 'POST'])
+def degoudse_settings():
+    if request.method == 'POST':
+        try:
+            data = request.json
+            print("Received data:", data)  # Debug log
+            
+            setting = DeGoudseSettings.query.filter_by(section_number=data['section_number']).first()
+            
+            if setting:
+                print("Updating existing setting")  # Debug log
+                setting.title = data.get('title', setting.title)
+                setting.link = data.get('link', setting.link)
+                setting.content = data.get('content', setting.content)
+            else:
+                print("Creating new setting")  # Debug log
+                setting = DeGoudseSettings(
+                    section_number=data['section_number'],
+                    title=data.get('title', ''),
+                    link=data.get('link', ''),
+                    content=data.get('content', '')
+                )
+                db.session.add(setting)
+            
+            db.session.commit()
+            print("Settings saved successfully")  # Debug log
+            return jsonify({"status": "success", "message": "Settings saved successfully"})
+        except Exception as e:
+            print("Error saving settings:", str(e))  # Debug log
+            db.session.rollback()
+            return jsonify({"status": "error", "message": str(e)}), 400
 
 if __name__ == '__main__':
     with app.app_context():
