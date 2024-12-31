@@ -8,20 +8,27 @@ import os
 db = SQLAlchemy()
 migrate = Migrate()
 
-# Create the Flask application
-app = Flask(__name__, static_url_path='/static', static_folder='static')
+def create_app():
+    app = Flask(__name__, static_url_path='/static', static_folder='static')
 
-# PostgreSQL configuration
-database_url = os.environ.get('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    # PostgreSQL configuration
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url and database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize the application with extensions
-db.init_app(app)
-migrate.init_app(app, db)
+    # Initialize the application with extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+
+    with app.app_context():
+        db.create_all()  # This will create tables
+        
+    return app
+
+app = create_app()
 
 # Database Models
 class DeGoudseSettings(db.Model):
@@ -263,6 +270,4 @@ def degoudse_settings():
             return jsonify({"status": "error", "message": str(e)}), 400
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True) 
