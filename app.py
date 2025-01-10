@@ -16,7 +16,7 @@ def create_app():
     if database_url and database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:your_password@localhost:5432/your_database_name'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize the application with extensions
@@ -268,6 +268,14 @@ def degoudse_settings():
             print("Error saving settings:", str(e))  # Debug log
             db.session.rollback()
             return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/navigation')
+def navigation():
+    try:
+        return render_template('navigation.html')
+    except Exception as e:
+        print(f"Error rendering navigation: {str(e)}")
+        return str(e), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
