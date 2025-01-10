@@ -16,7 +16,7 @@ def create_app():
     if database_url and database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:your_password@localhost:5432/your_database_name'
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize the application with extensions
