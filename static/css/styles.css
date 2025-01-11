@@ -823,7 +823,7 @@ h3 {
     font-weight: 500;
     text-transform: uppercase;
     color: white;
-    background-color: #526271;
+    background-color: rgb(224, 71, 235);
     height: 36px;
     width: 36px;
     border-radius: 50%;
@@ -831,4 +831,30 @@ h3 {
     align-items: center;
     justify-content: center;
     margin-left: 24px;
+}
+
+.q-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: normal; /* Ensure inactive tabs are not bold */
+    color: #555; /* Default tab color */
+    border: none;
+    background: none;
+    outline: none;
+    position: relative;
+}
+
+.q-tab-active {
+    color: #5567E5; /* Active tab text color */
+    font-weight: bold; /* Bold active tab */
+}
+
+.q-tab-active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px; /* Positioning the blue line */
+    height: 2px; /* Height of the blue line */
+    background-color: #5567E5; /* Blue line color */
 }
