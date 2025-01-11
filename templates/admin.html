@@ -8,6 +8,33 @@
     <!-- Quill CSS and JS only on admin page -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <style>
+        .q-tabs {
+            display: flex;
+            margin-bottom: 10px;
+            margin-left: 20px;
+        }
+        .q-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            border: none;
+            background: none;
+            outline: none;
+            font-weight: normal;
+        }
+        .q-tab-active {
+            color: #5567E5;
+            font-weight: bold;
+            border-bottom: 2px solid #5567E5; /* Active tab underline */
+        }
+        .tab-content {
+            display: none; /* Hide all tab content by default */
+        }
+        .tab-content.active {
+            display: block; /* Show active tab content */
+        }
+    </style>
 </head>
 <body>
     <nav>
@@ -27,81 +54,113 @@
     </nav>
 
     <div class="admin-container">
-        <!-- De Goudse Section -->
-        <div class="section">
-            <h2>De Goudse Settings</h2>
-            <form id="degoudse-form">
-                <!-- Sections 1-4 -->
-                {% for i in range(1, 5) %}
-                <div class="form-group">
-                    <h3>Section {{ i }}</h3>
-                    <div class="input-group">
-                        <label for="degoudse-title-{{ i }}">Title:</label>
-                        <input type="text" id="degoudse-title-{{ i }}" name="degoudse-title-{{ i }}" disabled>
-                    </div>
-                    <div class="input-group">
-                        <label for="degoudse-link-{{ i }}">Link:</label>
-                        <input type="text" id="degoudse-link-{{ i }}" name="degoudse-link-{{ i }}" disabled>
-                    </div>
-                    <!-- Add edit/save buttons for each section -->
-                    <div class="button-group">
-                        <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit({{ i }})">Edit</button>
-                        <button type="button" class="save-btn" onclick="saveDeGoudseSettings({{ i }})" style="display: none;">Save</button>
-                    </div>
-                </div>
-                {% endfor %}
-                
-                <!-- Section 5 (Rich Text Content) -->
-                <div class="form-group">
-                    <h3>Additional Information</h3>
-                    <div id="degoudse-editor"></div>
-                    <div class="button-group">
-                        <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit(5)">Edit</button>
-                        <button type="button" class="save-btn" onclick="saveDeGoudseSettings(5)" style="display: none;">Save</button>
-                    </div>
-                </div>
-            </form>
+        <!-- Tabs Section -->
+        <div class="q-tabs">
+            <button class="q-tab q-tab-active" onclick="showTab('demo')">Demo</button>
+            <button class="q-tab" onclick="showTab('old')">Old</button>
         </div>
 
-        <!-- Baloise Section -->
-        <div class="section">
-            <h2>Baloise Settings</h2>
-            <form id="baloise-form">
-                <!-- Sections 1-4 -->
-                {% for i in range(1, 5) %}
-                <div class="form-group">
-                    <h3>Section {{ i }}</h3>
-                    <div class="input-group">
-                        <label for="baloise-title-{{ i }}">Title:</label>
-                        <input type="text" id="baloise-title-{{ i }}" name="baloise-title-{{ i }}" disabled>
+        <!-- Demo Tab Content -->
+        <div id="demo" class="tab-content active">
+            <h2>Demo Settings</h2>
+            <p>This is where you will create new admin material that will define the demo.html page.</p>
+            <!-- Add your demo content here -->
+        </div>
+
+        <!-- Old Tab Content -->
+        <div id="old" class="tab-content">
+            <div class="section">
+                <h2>De Goudse Settings</h2>
+                <form id="degoudse-form">
+                    <!-- Sections 1-4 -->
+                    {% for i in range(1, 5) %}
+                    <div class="form-group">
+                        <h3>Section {{ i }}</h3>
+                        <div class="input-group">
+                            <label for="degoudse-title-{{ i }}">Title:</label>
+                            <input type="text" id="degoudse-title-{{ i }}" name="degoudse-title-{{ i }}" disabled>
+                        </div>
+                        <div class="input-group">
+                            <label for="degoudse-link-{{ i }}">Link:</label>
+                            <input type="text" id="degoudse-link-{{ i }}" name="degoudse-link-{{ i }}" disabled>
+                        </div>
+                        <!-- Add edit/save buttons for each section -->
+                        <div class="button-group">
+                            <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit({{ i }})">Edit</button>
+                            <button type="button" class="save-btn" onclick="saveDeGoudseSettings({{ i }})" style="display: none;">Save</button>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="baloise-link-{{ i }}">Link:</label>
-                        <input type="text" id="baloise-link-{{ i }}" name="baloise-link-{{ i }}" disabled>
+                    {% endfor %}
+                    
+                    <!-- Section 5 (Rich Text Content) -->
+                    <div class="form-group">
+                        <h3>Additional Information</h3>
+                        <div id="degoudse-editor"></div>
+                        <div class="button-group">
+                            <button type="button" class="edit-btn" onclick="toggleDeGoudseEdit(5)">Edit</button>
+                            <button type="button" class="save-btn" onclick="saveDeGoudseSettings(5)" style="display: none;">Save</button>
+                        </div>
                     </div>
-                    <!-- Add edit/save buttons for each section -->
-                    <div class="button-group">
-                        <button type="button" class="edit-btn" onclick="toggleBaloiseEdit({{ i }})">Edit</button>
-                        <button type="button" class="save-btn" onclick="saveBaloiseSettings({{ i }})" style="display: none;">Save</button>
+                </form>
+            </div>
+
+            <!-- Baloise Section -->
+            <div class="section">
+                <h2>Baloise Settings</h2>
+                <form id="baloise-form">
+                    <!-- Sections 1-4 -->
+                    {% for i in range(1, 5) %}
+                    <div class="form-group">
+                        <h3>Section {{ i }}</h3>
+                        <div class="input-group">
+                            <label for="baloise-title-{{ i }}">Title:</label>
+                            <input type="text" id="baloise-title-{{ i }}" name="baloise-title-{{ i }}" disabled>
+                        </div>
+                        <div class="input-group">
+                            <label for="baloise-link-{{ i }}">Link:</label>
+                            <input type="text" id="baloise-link-{{ i }}" name="baloise-link-{{ i }}" disabled>
+                        </div>
+                        <!-- Add edit/save buttons for each section -->
+                        <div class="button-group">
+                            <button type="button" class="edit-btn" onclick="toggleBaloiseEdit({{ i }})">Edit</button>
+                            <button type="button" class="save-btn" onclick="saveBaloiseSettings({{ i }})" style="display: none;">Save</button>
+                        </div>
                     </div>
-                </div>
-                {% endfor %}
-                
-                <!-- Section 5 (Rich Text Content) -->
-                <div class="form-group">
-                    <h3>Additional Information</h3>
-                    <div id="baloise-editor"></div>
-                    <div class="button-group">
-                        <button type="button" class="edit-btn" onclick="toggleBaloiseEdit(5)">Edit</button>
-                        <button type="button" class="save-btn" onclick="saveBaloiseSettings(5)" style="display: none;">Save</button>
+                    {% endfor %}
+                    
+                    <!-- Section 5 (Rich Text Content) -->
+                    <div class="form-group">
+                        <h3>Additional Information</h3>
+                        <div id="baloise-editor"></div>
+                        <div class="button-group">
+                            <button type="button" class="edit-btn" onclick="toggleBaloiseEdit(5)">Edit</button>
+                            <button type="button" class="save-btn" onclick="saveBaloiseSettings(5)" style="display: none;">Save</button>
+                        </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- Your custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const tabItems = document.querySelectorAll('.q-tab');
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active'); // Hide all tabs
+            });
+
+            tabItems.forEach(item => {
+                item.classList.remove('q-tab-active'); // Remove active class from all tabs
+            });
+
+            document.getElementById(tabName).classList.add('active'); // Show the selected tab
+            document.querySelector(`.q-tab[onclick="showTab('${tabName}')"]`).classList.add('q-tab-active'); // Set the clicked tab as active
+        }
+    </script>
 </body>
 </html>
 
