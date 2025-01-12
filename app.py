@@ -1,12 +1,17 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
 import os
+import openai
+from dotenv import load_dotenv
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
 migrate = Migrate()
+
+load_dotenv()  # Load environment variables from .env file
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def create_app():
     app = Flask(__name__, static_url_path='/static', static_folder='static')
@@ -18,6 +23,7 @@ def create_app():
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['UPLOAD_FOLDER'] = 'uploads'
 
     # Initialize the application with extensions
     db.init_app(app)
@@ -236,6 +242,49 @@ def baloise():
 @app.route('/navigation')
 def navigation():
     return render_template('navigation.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+    if file.filename == '':
+        return redirect(request.url)
+    if file:
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+        # Process the file and update the vector database
+        process_file(file.filename)
+        return redirect(url_for('manage'))
+
+def process_file(filename):
+    # Implement logic to process the file and update the vector database
+    pass
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    query = data.get('query')
+    response = generate_response(query)
+    return jsonify({'response': response})
+
+def generate_response(query):
+    # Retrieve relevant documents from the vector database
+    relevant_docs = retrieve_documents(query)
+    
+    # Use OpenAI to generate a response using the chat model
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # Use the chat model
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": query}
+        ],
+        max_tokens=150
+    )
+    return response.choices[0].message['content'].strip()
+
+def retrieve_documents(query):
+    # Implement logic to retrieve documents from the vector database
+    return []
 
 if __name__ == '__main__':
     app.run(debug=True) 

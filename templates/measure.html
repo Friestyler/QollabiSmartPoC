@@ -8,10 +8,31 @@
 
 <div id="partnerPilot" class="tab-content" style="display: block;">
     <h2>Partner Pilot Content</h2>
-    <!-- Add content specific to Partner Pilot here -->
+    <div id="chatbot">
+        <input type="text" id="userInput" placeholder="Ask a question...">
+        <button onclick="sendMessage()">Send</button>
+        <div id="chatOutput"></div>
+    </div>
 </div>
 <div id="reports" class="tab-content" style="display: none;">
     <h2>Reports Content</h2>
-    <!-- Add content specific to Reports here -->
 </div>
+
+<script>
+    function sendMessage() {
+        const userInput = document.getElementById('userInput').value;
+        fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: userInput })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const chatOutput = document.getElementById('chatOutput');
+            chatOutput.innerHTML += `<p>User: ${userInput}</p><p>Bot: ${data.response}</p>`;
+        });
+    }
+</script>
 {% endblock %} 
