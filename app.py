@@ -43,6 +43,36 @@ logger = logging.getLogger(__name__)
 # Add these debug prints right after your imports
 logger.info("Starting application initialization...")
 
+def init_pinecone():
+    try:
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index_name = os.getenv('PINECONE_INDEX_NAME', 'quickstart')
+        
+        # Check if index exists before trying to create it
+        if index_name not in pc.list_indexes().names():
+            logger.info(f"Creating new index: {index_name}")
+            pc.create_index(
+                name=index_name,
+                dimension=1536,
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
+                )
+            )
+        else:
+            logger.info(f"Index {index_name} already exists")
+        
+        return pc.Index(index_name)
+    except Exception as e:
+        logger.error(f"Error initializing Pinecone: {str(e)}")
+        raise
+
+# Remove any debug logging of API keys
+logger.info("Initializing application...")
+logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
+logger.info(f"Pinecone Index Name: {os.getenv('PINECONE_INDEX_NAME', 'quickstart')}")
+
 try:
     logger.info("Loading environment variables...")
     load_dotenv()
