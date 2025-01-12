@@ -8,10 +8,22 @@
 
 <div id="partnerPilot" class="tab-content" style="display: block;">
     <h2>Partner Pilot Settings</h2>
-    <!-- Add content specific to Partner Pilot here -->
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <label for="file">Upload Document:</label>
+        <input type="file" name="file" id="file">
+        <button type="submit">Upload</button>
+    </form>
+    <form action="/update_settings" method="post">
+        <label for="openai_key">OpenAI API Key:</label>
+        <input type="text" name="openai_key" id="openai_key" value="{{ openai_key }}">
+        
+        <label for="pinecone_key">Pinecone API Key:</label>
+        <input type="text" name="pinecone_key" id="pinecone_key" value="{{ pinecone_key }}">
+        
+        <button type="submit">Save Settings</button>
+    </form>
 </div>
 <div id="reports" class="tab-content" style="display: none;">
-    <h2>Reports Settings</h2>
-    <!-- Add content specific to Reports here -->
+    <h2>Reports Content</h2>
 </div>
 {% endblock %}

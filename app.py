@@ -5,13 +5,40 @@ from datetime import datetime
 import os
 import openai
 from dotenv import load_dotenv
+from pinecone import Pinecone, ServerlessSpec
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
 migrate = Migrate()
 
-load_dotenv()  # Load environment variables from .env file
+# Load environment variables from .env file
+load_dotenv()
+
+# Access the API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
+pinecone_api_key = os.getenv('PINECONE_API_KEY')
+
+# Check if the Pinecone API key is loaded
+if not pinecone_api_key:
+    raise ValueError("Pinecone API key is not set. Please check your .env file.")
+
+# Replace the current Pinecone initialization with:
+pc = Pinecone(api_key=pinecone_api_key)
+
+# Example: Check if an index exists and create it if not
+index_name = 'quickstart'
+if index_name not in pc.list_indexes().names():
+    pc.create_index(
+        name=index_name,
+        dimension=2,
+        metric='cosine',
+        spec=ServerlessSpec(
+            cloud='aws',
+            region='us-east-1'
+        )
+    )
+
+print("Pinecone API Key:", pinecone_api_key)
 
 def create_app():
     app = Flask(__name__, static_url_path='/static', static_folder='static')
@@ -217,7 +244,7 @@ def admin():
 
 @app.route('/manage')
 def manage():
-    return render_template('manage.html')
+    return render_template('manage.html', openai_key=os.getenv('OPENAI_API_KEY'), pinecone_key=os.getenv('PINECONE_API_KEY'))
 
 @app.route('/degoudse')
 def degoudse():
@@ -259,6 +286,14 @@ def upload_file():
 def process_file(filename):
     # Implement logic to process the file and update the vector database
     pass
+
+@app.route('/update_settings', methods=['POST'])
+def update_settings():
+    openai_key = request.form.get('openai_key')
+    pinecone_key = request.form.get('pinecone_key')
+    # Update environment variables or configuration as needed
+    # For example, you might save these to a database or a secure storage
+    return redirect(url_for('manage'))
 
 @app.route('/chat', methods=['POST'])
 def chat():
