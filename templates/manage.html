@@ -23,7 +23,212 @@
         <button type="submit">Save Settings</button>
     </form>
 </div>
+
 <div id="reports" class="tab-content" style="display: none;">
-    <h2>Reports Content</h2>
+    <h2>Demo Settings</h2>
+    <div class="container mt-4">
+        <!-- Add New Section Button -->
+        <button class="btn btn-success mb-4" onclick="showAddForm()">Add New Section</button>
+        
+        <!-- Form for both Add and Edit -->
+        <form method="POST" id="demoSettingsForm" style="display: none;">
+            <input type="hidden" id="setting_id" name="setting_id">
+            <h4 id="formTitle">Add New Section</h4>
+            <div class="mb-3">
+                <label for="section_number" class="form-label">Section Number</label>
+                <input type="number" class="form-control" id="section_number" name="section_number" required>
+            </div>
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" name="title">
+            </div>
+            <div class="mb-3">
+                <label for="link" class="form-label">Link</label>
+                <input type="text" class="form-control" id="link" name="link">
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">Content</label>
+                <textarea class="form-control" id="content" name="content" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+        </form>
+
+        <!-- Display existing settings -->
+        <div class="mt-4">
+            <h4>Existing Sections</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Section</th>
+                        <th>Title</th>
+                        <th>Link</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for setting in demo_settings %}
+                    <tr id="setting-{{ setting.id }}">
+                        <td>{{ setting.section_number }}</td>
+                        <td>{{ setting.title }}</td>
+                        <td>{{ setting.link }}</td>
+                        <td>{{ setting.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editSetting({{ setting.id }})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSetting({{ setting.id }})">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+<style>
+.popup-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    display: none;
+    z-index: 1000;
+    animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+</style>
+
+<div id="popupMessage" class="popup-message"></div>
+
+<script>
+function showPopupMessage(message, isError = false) {
+    const popup = document.getElementById('popupMessage');
+    popup.textContent = message;
+    popup.style.backgroundColor = isError ? '#f44336' : '#4CAF50';
+    popup.style.display = 'block';
+    
+    // Hide the message after 3 seconds
+    setTimeout(() => {
+        popup.style.display = 'none';
+    }, 3000);
+}
+
+function showAddForm() {
+    document.getElementById('demoSettingsForm').style.display = 'block';
+    document.getElementById('formTitle').textContent = 'Add New Section';
+    document.getElementById('setting_id').value = '';
+    document.getElementById('demoSettingsForm').reset();
+}
+
+function cancelEdit() {
+    document.getElementById('demoSettingsForm').style.display = 'none';
+    document.getElementById('demoSettingsForm').reset();
+}
+
+function editSetting(settingId) {
+    const row = document.getElementById(`setting-${settingId}`);
+    const cells = row.getElementsByTagName('td');
+    
+    document.getElementById('setting_id').value = settingId;
+    document.getElementById('section_number').value = cells[0].textContent;
+    document.getElementById('title').value = cells[1].textContent;
+    document.getElementById('link').value = cells[2].textContent;
+    
+    document.getElementById('formTitle').textContent = 'Edit Section';
+    document.getElementById('demoSettingsForm').style.display = 'block';
+    document.querySelector('form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteSetting(settingId) {
+    if (confirm('Are you sure you want to delete this setting?')) {
+        fetch(`/delete_demo_setting/${settingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`setting-${settingId}`).remove();
+                showPopupMessage('Setting deleted successfully');
+            } else {
+                showPopupMessage('Error deleting setting: ' + data.message, true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showPopupMessage('Error deleting setting', true);
+        });
+    }
+}
+
+document.getElementById('demoSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const settingId = formData.get('setting_id');
+    const url = settingId ? `/edit_demo_setting/${settingId}` : '/update_demo_settings';
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showPopupMessage('Settings saved successfully');
+            this.reset();
+            this.style.display = 'none';
+            refreshTable();
+        } else {
+            showPopupMessage('Error saving settings: ' + data.message, true);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showPopupMessage('Error saving settings', true);
+    });
+});
+
+// Add this function to refresh the table
+function refreshTable() {
+    fetch('/get_demo_settings')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.querySelector('table tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+            
+            data.forEach(setting => {
+                const row = `
+                    <tr id="setting-${setting.id}">
+                        <td>${setting.section_number}</td>
+                        <td>${setting.title}</td>
+                        <td>${setting.link}</td>
+                        <td>${new Date(setting.updated_at).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editSetting(${setting.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSetting(${setting.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        })
+        .catch(error => {
+            console.error('Error refreshing table:', error);
+            showPopupMessage('Error refreshing table', true);
+        });
+}
+</script>
 {% endblock %}

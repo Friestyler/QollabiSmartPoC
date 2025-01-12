@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
@@ -132,6 +132,19 @@ class BaloiseSettings(db.Model):
             'link': self.link,
             'content': self.content
         }
+
+class DemoSettings(db.Model):
+    __tablename__ = 'demo_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    section_number = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(200))
+    link = db.Column(db.String(500))
+    content = db.Column(db.Text)  # For section 5
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<DemoSettings {self.section_number}: {self.title}>'
 
 # Routes for saving settings
 @app.route('/save_degoudse_settings', methods=['POST'])
@@ -269,7 +282,9 @@ def get_baloise_settings():
 # Page routes
 @app.route('/')
 def measure():
-    return render_template('measure.html')
+    # Get all demo settings ordered by section number
+    demo_settings = DemoSettings.query.order_by(DemoSettings.section_number).all()
+    return render_template('measure.html', demo_settings=demo_settings)
 
 @app.route('/admin')
 def admin():
@@ -277,7 +292,12 @@ def admin():
 
 @app.route('/manage')
 def manage():
-    return render_template('manage.html', openai_key=os.getenv('OPENAI_API_KEY'), pinecone_key=os.getenv('PINECONE_API_KEY'))
+    # Get all demo settings ordered by section number
+    demo_settings = DemoSettings.query.order_by(DemoSettings.section_number).all()
+    return render_template('manage.html', 
+                         demo_settings=demo_settings,
+                         openai_key=os.getenv('OPENAI_API_KEY'),
+                         pinecone_key=os.getenv('PINECONE_API_KEY'))
 
 @app.route('/degoudse')
 def degoudse():
@@ -353,6 +373,65 @@ def generate_response(query):
 def retrieve_documents(query):
     # Implement logic to retrieve documents from the vector database
     return []
+
+@app.route('/update_demo_settings', methods=['POST'])
+def update_demo_settings():
+    try:
+        # Create new demo settings
+        demo_setting = DemoSettings(
+            section_number=request.form.get('section_number'),
+            title=request.form.get('title'),
+            link=request.form.get('link'),
+            content=request.form.get('content')
+        )
+        db.session.add(demo_setting)
+        db.session.commit()
+        flash('Demo settings saved successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving demo settings: {str(e)}', 'error')
+    
+    return redirect(url_for('manage'))
+
+@app.route('/edit_demo_setting/<int:setting_id>', methods=['POST'])
+def edit_demo_setting(setting_id):
+    try:
+        setting = DemoSettings.query.get_or_404(setting_id)
+        setting.section_number = request.form.get('section_number')
+        setting.title = request.form.get('title')
+        setting.link = request.form.get('link')
+        setting.content = request.form.get('content')
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Setting updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/delete_demo_setting/<int:setting_id>', methods=['POST'])
+def delete_demo_setting(setting_id):
+    try:
+        setting = DemoSettings.query.get_or_404(setting_id)
+        db.session.delete(setting)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/get_demo_settings')
+def get_demo_settings():
+    try:
+        settings = DemoSettings.query.order_by(DemoSettings.section_number).all()
+        return jsonify([{
+            'id': s.id,
+            'section_number': s.section_number,
+            'title': s.title,
+            'link': s.link,
+            'content': s.content,
+            'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        } for s in settings])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

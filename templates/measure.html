@@ -15,7 +15,33 @@
     </div>
 </div>
 <div id="reports" class="tab-content" style="display: none;">
-    <h2>Reports Content</h2>
+    <div class="tab-pane fade" id="reporting" role="tabpanel">
+        <div class="container mt-4">
+            {% for setting in demo_settings %}
+            <div class="section-container mb-5">
+                {% if setting.title %}
+                <h3 class="section-title">{{ setting.title }}</h3>
+                {% endif %}
+                
+                {% if setting.link %}
+                <div class="iframe-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+                    <iframe 
+                        src="{{ setting.link }}"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                {% endif %}
+
+                {% if setting.content %}
+                <div class="content-container mt-4">
+                    <p>{{ setting.content }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 
 <script>
@@ -35,4 +61,33 @@
         });
     }
 </script>
+
+<style>
+.section-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.iframe-container {
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin: 15px 0;
+}
+
+.content-container {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+</style>
 {% endblock %} 
