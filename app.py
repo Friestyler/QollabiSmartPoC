@@ -450,7 +450,7 @@ def upload_file():
                 s3_client = boto3.client('s3')
                 bucket_name = os.getenv('S3_BUCKET_NAME')
                 
-                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
                     logger.info(f"Downloading from S3: {filename}")
                     s3_client.download_fileobj(bucket_name, filename, temp_file)
                     temp_file.seek(0)
@@ -895,6 +895,14 @@ def check_s3_connection():
             'bucket_name': bucket_name,
             'error': str(e)
         }), 500
+
+def get_embedding(text):
+    client = OpenAI()
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding
 
 if __name__ == '__main__':
     app.run(debug=True) 
