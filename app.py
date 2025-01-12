@@ -22,8 +22,14 @@ pinecone_api_key = os.getenv('PINECONE_API_KEY')
 if not pinecone_api_key:
     raise ValueError("Pinecone API key is not set. Please check your .env file.")
 
-# Replace the current Pinecone initialization with:
-pc = Pinecone(api_key=pinecone_api_key)
+# Add these debug prints
+print("Initializing Pinecone...")
+print(f"Pinecone API Key exists: {bool(pinecone_api_key)}")
+try:
+    pc = Pinecone(api_key=pinecone_api_key)
+    print("Pinecone initialized successfully")
+except Exception as e:
+    print(f"Error initializing Pinecone: {str(e)}")
 
 # Example: Check if an index exists and create it if not
 index_name = 'quickstart'
