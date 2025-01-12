@@ -6,6 +6,7 @@ import os
 import openai
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
+import logging
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -27,12 +28,33 @@ if not pinecone_api_key:
 # Add these debug prints
 print("Initializing Pinecone...")
 print(f"Pinecone API Key exists: {bool(pinecone_api_key)}")
+
+# Add these debug prints at the start of your app
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Add these debug prints right after your imports
+logger.info("Starting application initialization...")
+
 try:
+    logger.info("Loading environment variables...")
+    load_dotenv()
+    
+    logger.info("Checking Pinecone API key...")
+    pinecone_api_key = os.getenv('PINECONE_API_KEY')
+    if not pinecone_api_key:
+        logger.error("Pinecone API key not found in environment variables")
+        raise ValueError("Pinecone API key is not set")
+    
+    logger.info("Initializing Pinecone...")
     pc = Pinecone(api_key=pinecone_api_key)
-    print("Pinecone initialized successfully")
-    print("Creating index...")
+    logger.info("Pinecone initialized successfully")
+    
+    logger.info("Setting up Pinecone index...")
     index_name = 'quickstart'
     if index_name not in pc.list_indexes().names():
+        logger.info(f"Creating new index: {index_name}")
         pc.create_index(
             name=index_name,
             dimension=2,
@@ -42,9 +64,12 @@ try:
                 region='us-east-1'
             )
         )
-    print("Index creation completed")
+        logger.info("Index created successfully")
+    else:
+        logger.info("Index already exists")
 except Exception as e:
-    print(f"Error initializing Pinecone: {str(e)}")
+    logger.error(f"Error during initialization: {str(e)}")
+    raise
 
 print("Pinecone API Key:", pinecone_api_key)
 
