@@ -1,0 +1,17 @@
+{% extends "navigation.html" %}
+
+{% block content %}
+<div class="q-tabs">
+    <button class="q-tab q-tab-active" onclick="showTab('partnerPilot')">Partner Pilot</button>
+    <button class="q-tab" onclick="showTab('reports')">Reports</button>
+</div>
+
+<div id="partnerPilot" class="tab-content" style="display: block;">
+    <h2>Partner Pilot Settings</h2>
+    <!-- Add content specific to Partner Pilot here -->
+</div>
+<div id="reports" class="tab-content" style="display: none;">
+    <h2>Reports Settings</h2>
+    <!-- Add content specific to Reports here -->
+</div>
+{% endblock %}

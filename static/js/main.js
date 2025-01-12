@@ -560,3 +560,41 @@ function initializeSlider() {
 document.addEventListener('DOMContentLoaded', function() {
     initializeSlider();
 }); 
+
+document.addEventListener('DOMContentLoaded', function() {
+    const navItems = document.querySelectorAll('.q-nav-menu-item');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', function(event) {
+            // Remove active class from all items
+            navItems.forEach(nav => nav.classList.remove('q-nav-menu-item-active'));
+
+            // Add active class to the clicked item
+            this.classList.add('q-nav-menu-item-active');
+        });
+    });
+
+    // Highlight the active item based on the current path
+    const currentPath = window.location.pathname;
+    navItems.forEach(item => {
+        if (item.getAttribute('href') === currentPath) {
+            item.classList.add('q-nav-menu-item-active');
+        }
+    });
+}); 
+
+function showTab(tabName) {
+    const tabs = document.querySelectorAll('.tab-content');
+    const tabItems = document.querySelectorAll('.q-tab');
+
+    tabs.forEach(tab => {
+        tab.style.display = 'none'; // Hide all tabs
+    });
+
+    tabItems.forEach(item => {
+        item.classList.remove('q-tab-active'); // Remove active class from all tabs
+    });
+
+    document.getElementById(tabName).style.display = 'block'; // Show the selected tab
+    document.querySelector(`.q-tab[onclick="showTab('${tabName}')"]`).classList.add('q-tab-active'); // Set the clicked tab as active
+} 

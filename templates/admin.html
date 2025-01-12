@@ -56,19 +56,11 @@
     <div class="admin-container">
         <!-- Tabs Section -->
         <div class="q-tabs">
-            <button class="q-tab q-tab-active" onclick="showTab('demo')">Demo</button>
             <button class="q-tab" onclick="showTab('old')">Old</button>
         </div>
 
-        <!-- Demo Tab Content -->
-        <div id="demo" class="tab-content active">
-            <h2>Demo Settings</h2>
-            <p>This is where you will create new admin material that will define the demo.html page.</p>
-            <!-- Add your demo content here -->
-        </div>
-
         <!-- Old Tab Content -->
-        <div id="old" class="tab-content">
+        <div id="old" class="tab-content active">
             <div class="section">
                 <h2>De Goudse Settings</h2>
                 <form id="degoudse-form">
@@ -160,6 +152,17 @@
             document.getElementById(tabName).classList.add('active'); // Show the selected tab
             document.querySelector(`.q-tab[onclick="showTab('${tabName}')"]`).classList.add('q-tab-active'); // Set the clicked tab as active
         }
+
+        document.getElementById('upload-form').onsubmit = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.text();
+            document.getElementById('upload-response').innerText = result;
+        };
     </script>
 </body>
 </html>

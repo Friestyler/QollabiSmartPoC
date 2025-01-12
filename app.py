@@ -202,20 +202,16 @@ def get_baloise_settings():
 
 # Page routes
 @app.route('/')
+def measure():
+    return render_template('measure.html')
+
 @app.route('/admin')
 def admin():
-    try:
-        # Pre-fetch the data for both sections
-        degoudse_settings = DeGoudseSettings.query.order_by(DeGoudseSettings.section_number).all()
-        baloise_settings = BaloiseSettings.query.order_by(BaloiseSettings.section_number).all()
-        
-        print("Pre-fetched De Goudse settings:", [s.to_dict() for s in degoudse_settings])
-        print("Pre-fetched Baloise settings:", [s.to_dict() for s in baloise_settings])
-        
-        return render_template('admin.html')
-    except Exception as e:
-        print("Error in admin route:", str(e))
-        return render_template('admin.html')
+    return render_template('admin.html')
+
+@app.route('/manage')
+def manage():
+    return render_template('manage.html')
 
 @app.route('/degoudse')
 def degoudse():
@@ -237,45 +233,9 @@ def baloise():
         print("Error in baloise route:", str(e))
         return render_template('baloise.html')
 
-@app.route('/api/degoudse/settings', methods=['GET', 'POST'])
-def degoudse_settings():
-    if request.method == 'POST':
-        try:
-            data = request.json
-            print("Received data:", data)  # Debug log
-            
-            setting = DeGoudseSettings.query.filter_by(section_number=data['section_number']).first()
-            
-            if setting:
-                print("Updating existing setting")  # Debug log
-                setting.title = data.get('title', setting.title)
-                setting.link = data.get('link', setting.link)
-                setting.content = data.get('content', setting.content)
-            else:
-                print("Creating new setting")  # Debug log
-                setting = DeGoudseSettings(
-                    section_number=data['section_number'],
-                    title=data.get('title', ''),
-                    link=data.get('link', ''),
-                    content=data.get('content', '')
-                )
-                db.session.add(setting)
-            
-            db.session.commit()
-            print("Settings saved successfully")  # Debug log
-            return jsonify({"status": "success", "message": "Settings saved successfully"})
-        except Exception as e:
-            print("Error saving settings:", str(e))  # Debug log
-            db.session.rollback()
-            return jsonify({"status": "error", "message": str(e)}), 400
-
 @app.route('/navigation')
 def navigation():
-    try:
-        return render_template('navigation.html')
-    except Exception as e:
-        print(f"Error rendering navigation: {str(e)}")
-        return str(e), 500
+    return render_template('navigation.html')
 
 if __name__ == '__main__':
     app.run(debug=True) 
