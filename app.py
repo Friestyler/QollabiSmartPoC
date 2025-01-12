@@ -61,8 +61,6 @@ def allowed_file(filename):
 # Replace the initialization code
 try:
     with initialization_lock:
-        # Move global declaration to the top of the block
-        global initialization_done
         if not initialization_done:
             logger.info("Loading environment variables...")
             load_dotenv()
@@ -80,32 +78,30 @@ try:
             logger.info("Setting up Pinecone index...")
             index_name = os.getenv('PINECONE_INDEX_NAME')
             
-            # Only try to delete if the index exists
+            # Check if index exists but DON'T try to delete it
             existing_indexes = pc.list_indexes().names()
-            if index_name in existing_indexes:
-                try:
-                    logger.info(f"Deleting existing index: {index_name}")
-                    pc.delete_index(index_name)
-                    time.sleep(5)  # Wait for deletion to complete
-                except Exception as e:
-                    logger.warning(f"Error deleting index: {str(e)}")
-            
-            logger.info(f"Creating new index: {index_name}")
-            pc.create_index(
-                name=index_name,
-                dimension=1536,
-                metric='cosine',
-                spec=ServerlessSpec(
-                    cloud='aws',
-                    region='us-east-1'
+            if index_name not in existing_indexes:
+                logger.info(f"Creating new index: {index_name}")
+                pc.create_index(
+                    name=index_name,
+                    dimension=1536,
+                    metric='cosine',
+                    spec=ServerlessSpec(
+                        cloud='aws',
+                        region='us-east-1'
+                    )
                 )
-            )
-            logger.info("Index created successfully")
+                logger.info("Index created successfully")
+            else:
+                logger.info(f"Using existing index: {index_name}")
+            
             initialization_done = True
+
 except Exception as e:
     logger.error(f"Error during initialization: {str(e)}")
     raise
 
+# Remove any logging of API keys
 logger.info("Initializing application...")
 logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
 logger.info(f"Pinecone Index Name: {os.getenv('PINECONE_INDEX_NAME')}")
