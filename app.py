@@ -11,6 +11,8 @@ import logging
 from PyPDF2 import PdfReader
 from openai import OpenAI
 import time
+import boto3
+from botocore.exceptions import ClientError
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -148,6 +150,66 @@ class DemoSettings(db.Model):
 
     def __repr__(self):
         return f'<DemoSettings {self.section_number}: {self.title}>'
+
+# Initialize S3 client
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+)
+
+def upload_to_s3(file_path, filename):
+    """Upload a file to S3"""
+    try:
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        if not bucket_name:
+            logger.error("S3_BUCKET_NAME not set in environment variables")
+            return False
+            
+        if not os.getenv('AWS_ACCESS_KEY_ID') or not os.getenv('AWS_SECRET_ACCESS_KEY'):
+            logger.error("AWS credentials not set in environment variables")
+            return False
+
+        logger.info(f"Attempting to upload {filename} to S3 bucket: {bucket_name}")
+        s3_client.upload_file(
+            file_path, 
+            bucket_name, 
+            filename
+        )
+        logger.info(f"Successfully uploaded {filename} to S3")
+        return True
+    except ClientError as e:
+        logger.error(f"Error uploading to S3: {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error uploading to S3: {str(e)}")
+        return False
+
+def download_from_s3(filename):
+    """Download a file from S3"""
+    try:
+        local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        s3_client.download_file(
+            os.getenv('S3_BUCKET_NAME'),
+            filename,
+            local_path
+        )
+        return True
+    except ClientError as e:
+        logger.error(f"Error downloading from S3: {str(e)}")
+        return False
+
+def delete_from_s3(filename):
+    """Delete a file from S3"""
+    try:
+        s3_client.delete_object(
+            Bucket=os.getenv('S3_BUCKET_NAME'),
+            Key=filename
+        )
+        return True
+    except ClientError as e:
+        logger.error(f"Error deleting from S3: {str(e)}")
+        return False
 
 # Routes for saving settings
 @app.route('/save_degoudse_settings', methods=['POST'])
@@ -337,18 +399,32 @@ def upload_file():
     
     if file and file.filename.endswith('.pdf'):
         try:
+            logger.info(f"Starting upload process for {file.filename}")
+            
             # Create uploads directory if it doesn't exist
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
             
             filename = file.filename
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
-            logger.info(f"File saved: {filename}")
+            logger.info(f"Saved file locally to {file_path}")
             
-            if process_file(filename):
-                return jsonify({'success': True, 'message': 'File successfully uploaded and processed'})
+            # Upload to S3
+            if upload_to_s3(file_path, filename):
+                logger.info("Starting document processing...")
+                if process_file(filename):
+                    logger.info("Document successfully processed")
+                    return jsonify({
+                        'success': True, 
+                        'message': 'File successfully uploaded to S3 and processed',
+                        'location': 'S3'
+                    })
+                else:
+                    logger.error("Failed to process document")
             else:
-                return jsonify({'success': False, 'message': 'Error processing file'})
+                logger.error("Failed to upload to S3")
+            
+            return jsonify({'success': False, 'message': 'Error processing file'})
                 
         except Exception as e:
             logger.error(f"Error in upload: {str(e)}")
@@ -636,26 +712,23 @@ def get_documents():
 @app.route('/delete_document/<filename>', methods=['DELETE'])
 def delete_document(filename):
     try:
-        # Delete from filesystem first
+        # Delete from filesystem
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         if os.path.exists(file_path):
             os.remove(file_path)
-            logger.info(f"Deleted file: {filename}")
+        
+        # Delete from S3
+        delete_from_s3(filename)
         
         # Delete from Pinecone
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
         index = pc.Index('quickstart')
-        
-        # Delete vectors by filtering on the filename
-        logger.info(f"Deleting vectors for file: {filename}")
-        index.delete(
-            filter={"source": filename}
-        )
+        index.delete(filter={"source": filename})
         
         return jsonify({'success': True, 'message': 'Document deleted successfully'})
     except Exception as e:
         logger.error(f"Error deleting document: {str(e)}")
-        return jsonify({'success': False, 'message': 'Error deleting document: ' + str(e)}), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/reset_database', methods=['POST'])
 def reset_database():
@@ -691,6 +764,67 @@ def reset_database():
     except Exception as e:
         logger.error(f"Error resetting database: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Add a route to check S3 storage
+@app.route('/check_s3', methods=['GET'])
+def check_s3():
+    try:
+        # List objects in S3 bucket
+        response = s3_client.list_objects_v2(
+            Bucket=os.getenv('S3_BUCKET_NAME')
+        )
+        
+        files = []
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                files.append({
+                    'filename': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat()
+                })
+        
+        return jsonify({
+            'success': True,
+            'bucket': os.getenv('S3_BUCKET_NAME'),
+            'files': files
+        })
+    except Exception as e:
+        logger.error(f"Error checking S3: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Add this debug logging at app startup
+logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
+logger.info(f"AWS Access Key ID exists: {bool(os.getenv('AWS_ACCESS_KEY_ID'))}")
+logger.info(f"AWS Secret Access Key exists: {bool(os.getenv('AWS_SECRET_ACCESS_KEY'))}")
+
+@app.route('/check_s3_connection', methods=['GET'])
+def check_s3_connection():
+    try:
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        logger.info(f"Checking S3 connection for bucket: {bucket_name}")
+        
+        # Try to list objects in the bucket
+        response = s3_client.list_objects_v2(
+            Bucket=bucket_name,
+            MaxKeys=1  # Just check for one object to verify access
+        )
+        
+        return jsonify({
+            'success': True,
+            'bucket_name': bucket_name,
+            'can_access': True,
+            'response': {
+                'has_contents': 'Contents' in response,
+                'count': len(response.get('Contents', []))
+            }
+        })
+    except ClientError as e:
+        logger.error(f"Error accessing S3: {str(e)}")
+        return jsonify({
+            'success': False,
+            'bucket_name': bucket_name,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
