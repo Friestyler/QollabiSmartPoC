@@ -555,7 +555,7 @@ def chat():
         # Query Pinecone
         logger.info("Initializing Pinecone...")
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index = pc.Index(os.getenv('PINECONE_INDEX_NAME'))  # Use environment variable
+        index = pc.Index(os.getenv('PINECONE_INDEX_NAME'))
         
         # Search for relevant context
         logger.info("Querying Pinecone index...")
@@ -569,20 +569,31 @@ def chat():
         # Extract relevant context from the matches
         contexts = []
         for match in query_response.matches:
-            logger.info(f"Processing match with score: {match.score if hasattr(match, 'score') else 'no score'}")
-            if hasattr(match, 'score') and match.score > 0.7:  # Only use relevant matches
+            if hasattr(match, 'score') and match.score > 0.7:
                 if hasattr(match, 'metadata') and 'text' in match.metadata:
                     contexts.append(match.metadata['text'])
-                    logger.info(f"Added context from match: {match.metadata['text'][:100]}...")
 
         # Prepare the context string
         context_text = "\n".join(contexts) if contexts else ""
-        logger.info(f"Final context length: {len(context_text)} characters")
-        logger.info(f"Context used: {context_text[:200]}...")  # Log first 200 chars of context
-
-        # Prepare the messages for GPT
+        
+        # Prepare the messages for GPT with structured format
         messages = [
-            {"role": "system", "content": "You are a helpful assistant. Use the provided context to answer questions, and if you're not sure about something, say so."}
+            {"role": "system", "content": """You are a helpful assistant. Structure your responses clearly with sections and bullet points.
+            Use the following format:
+            
+            ## Summary
+            Brief overview of the answer
+            
+            ### Key Points
+            * Important point 1
+            * Important point 2
+            * Important point 3
+            
+            ### Details
+            Detailed explanation with relevant information
+            
+            ### References
+            * Reference relevant documents or sections if available"""}
         ]
 
         if context_text:
@@ -605,7 +616,7 @@ def chat():
         logger.info("Received response from GPT")
 
         response_text = chat_response.choices[0].message.content
-        logger.info(f"Final response: {response_text[:200]}...")  # Log first 200 chars of response
+        logger.info(f"Final response: {response_text[:200]}...")
 
         return jsonify({
             'response': response_text,

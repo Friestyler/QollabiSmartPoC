@@ -106,6 +106,88 @@
     margin-right: auto;
 }
 
+.assistant-message h2 {
+    color: #5567E5;
+    font-size: 1.25rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #5567E5;
+    padding-bottom: 0.5rem;
+}
+
+.assistant-message h3 {
+    color: #2c3e50;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.assistant-message ul, 
+.assistant-message ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.assistant-message li {
+    margin-bottom: 0.5rem;
+}
+
+.assistant-message p {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.assistant-message code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.assistant-message pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}
+
+.assistant-message blockquote {
+    border-left: 4px solid #5567E5;
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: #6c757d;
+}
+
+.assistant-message table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.assistant-message th,
+.assistant-message td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+}
+
+.assistant-message th {
+    background-color: #f8f9fa;
+}
+
+.assistant-message .important {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 0.5rem 1rem;
+    margin: 0.75rem 0;
+}
+
+.assistant-message .section {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
 .chat-container {
     border: 1px solid #dee2e6;
     border-radius: 8px;
@@ -204,9 +286,47 @@ function addMessage(message, sender) {
     const messagesContainer = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender}-message`;
-    messageDiv.textContent = message;
+    
+    if (sender === 'assistant') {
+        // Convert markdown-style formatting to HTML
+        message = formatMessage(message);
+    }
+    
+    messageDiv.innerHTML = message;
     messagesContainer.appendChild(messageDiv);
     scrollToBottom();
+}
+
+function formatMessage(message) {
+    // Replace markdown-style headers
+    message = message.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    message = message.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    
+    // Convert bullet points
+    message = message.replace(/^\* (.*$)/gm, '<li>$1</li>');
+    message = message.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+    
+    // Convert numbered lists
+    message = message.replace(/^\d\. (.*$)/gm, '<li>$1</li>');
+    message = message.replace(/(<li>.*<\/li>)/gs, '<ol>$1</ol>');
+    
+    // Convert code blocks
+    message = message.replace(/```(\w+)?\n([\s\S]*?)```/gm, '<pre><code>$2</code></pre>');
+    
+    // Convert inline code
+    message = message.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Convert blockquotes
+    message = message.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+    
+    // Convert important sections
+    message = message.replace(/!!! (.*$)/gm, '<div class="important">$1</div>');
+    
+    // Convert paragraphs
+    message = message.replace(/\n\n/g, '</p><p>');
+    message = '<p>' + message + '</p>';
+    
+    return message;
 }
 
 function showTypingIndicator() {
