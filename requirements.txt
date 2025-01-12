@@ -35,10 +35,7 @@ numpy==1.26.4
 openai==0.28.0
 orjson==3.10.14
 packaging==24.2
-pinecone==5.4.2
-pinecone-client==5.0.1
-pinecone-plugin-inference==3.1.0
-pinecone-plugin-interface==0.0.7
+pinecone-client>=2.2.4
 propcache==0.2.1
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
