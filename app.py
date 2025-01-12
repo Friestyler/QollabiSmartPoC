@@ -61,6 +61,8 @@ def allowed_file(filename):
 # Replace the initialization code
 try:
     with initialization_lock:
+        # Move global declaration to the top of the block
+        global initialization_done
         if not initialization_done:
             logger.info("Loading environment variables...")
             load_dotenv()
@@ -73,37 +75,36 @@ try:
             
             logger.info("Initializing Pinecone...")
             pc = Pinecone(api_key=pinecone_api_key)
+            logger.info("Pinecone initialized successfully")
             
-            # Get index name from environment
+            logger.info("Setting up Pinecone index...")
             index_name = os.getenv('PINECONE_INDEX_NAME')
-            logger.info(f"Using index name: {index_name}")
             
-            # Check if index exists
+            # Only try to delete if the index exists
             existing_indexes = pc.list_indexes().names()
-            logger.info(f"Existing indexes: {existing_indexes}")
+            if index_name in existing_indexes:
+                try:
+                    logger.info(f"Deleting existing index: {index_name}")
+                    pc.delete_index(index_name)
+                    time.sleep(5)  # Wait for deletion to complete
+                except Exception as e:
+                    logger.warning(f"Error deleting index: {str(e)}")
             
-            if index_name not in existing_indexes:
-                logger.info(f"Creating new index: {index_name}")
-                pc.create_index(
-                    name=index_name,
-                    dimension=1536,
-                    metric='cosine',
-                    spec=ServerlessSpec(
-                        cloud='aws',
-                        region='us-east-1'
-                    )
+            logger.info(f"Creating new index: {index_name}")
+            pc.create_index(
+                name=index_name,
+                dimension=1536,
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
                 )
-                logger.info("Index created successfully")
-            else:
-                logger.info(f"Index {index_name} already exists, using existing index")
-            
+            )
+            logger.info("Index created successfully")
             initialization_done = True
-            logger.info("Initialization completed successfully")
-
 except Exception as e:
     logger.error(f"Error during initialization: {str(e)}")
-    # Don't raise the error, just log it
-    initialization_done = True  # Set to true to prevent repeated initialization attempts
+    raise
 
 logger.info("Initializing application...")
 logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
