@@ -4,6 +4,7 @@
 <div class="q-tabs">
     <button class="q-tab q-tab-active" onclick="showTab('partnerPilot')">Partner Pilot</button>
     <button class="q-tab" onclick="showTab('reports')">Reports</button>
+    <button class="q-tab" onclick="showTab('presentations')">Presentations</button>
 </div>
 
 <div id="partnerPilot" class="tab-content" style="display: block;">
@@ -56,6 +57,12 @@
             </div>
             {% endfor %}
         </div>
+    </div>
+</div>
+<div id="presentations" class="tab-content" style="display: none;">
+    <h2>Presentations</h2>
+    <div class="container mt-4">
+        <!-- Add your presentations content here -->
     </div>
 </div>
 
@@ -353,6 +360,24 @@ function hideTypingIndicator() {
 function scrollToBottom() {
     const messagesContainer = document.getElementById('chat-messages');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.q-tab').forEach(button => {
+        button.classList.remove('q-tab-active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName).style.display = 'block';
+    
+    // Add active class to clicked button
+    event.target.classList.add('q-tab-active');
 }
 </script>
 {% endblock %} 
