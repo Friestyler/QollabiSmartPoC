@@ -12,6 +12,8 @@ db = SQLAlchemy()
 migrate = Migrate()
 
 # Load environment variables from .env file
+print("Starting application...")
+print("Loading environment variables...")
 load_dotenv()
 
 # Access the API keys
@@ -28,21 +30,21 @@ print(f"Pinecone API Key exists: {bool(pinecone_api_key)}")
 try:
     pc = Pinecone(api_key=pinecone_api_key)
     print("Pinecone initialized successfully")
+    print("Creating index...")
+    index_name = 'quickstart'
+    if index_name not in pc.list_indexes().names():
+        pc.create_index(
+            name=index_name,
+            dimension=2,
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-east-1'
+            )
+        )
+    print("Index creation completed")
 except Exception as e:
     print(f"Error initializing Pinecone: {str(e)}")
-
-# Example: Check if an index exists and create it if not
-index_name = 'quickstart'
-if index_name not in pc.list_indexes().names():
-    pc.create_index(
-        name=index_name,
-        dimension=2,
-        metric='cosine',
-        spec=ServerlessSpec(
-            cloud='aws',
-            region='us-east-1'
-        )
-    )
 
 print("Pinecone API Key:", pinecone_api_key)
 
