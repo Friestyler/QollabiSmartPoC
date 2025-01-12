@@ -103,11 +103,19 @@ try:
     logger.info("Pinecone initialized successfully")
     
     logger.info("Setting up Pinecone index...")
-    index_name = os.getenv('PINECONE_INDEX_NAME')  # Remove hardcoded 'quickstart'
-    if index_name in pc.list_indexes().names():
-        logger.info(f"Deleting existing index: {index_name}")
-        pc.delete_index(index_name)
-        
+    index_name = os.getenv('PINECONE_INDEX_NAME')
+    
+    # Only try to delete if the index exists
+    existing_indexes = pc.list_indexes().names()
+    if index_name in existing_indexes:
+        try:
+            logger.info(f"Deleting existing index: {index_name}")
+            pc.delete_index(index_name)
+            time.sleep(5)  # Wait for deletion to complete
+        except Exception as e:
+            logger.warning(f"Error deleting index: {str(e)}")
+            # Continue anyway as we'll create a new one
+    
     logger.info(f"Creating new index: {index_name}")
     pc.create_index(
         name=index_name,
