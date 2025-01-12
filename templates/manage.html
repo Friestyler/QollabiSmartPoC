@@ -145,6 +145,33 @@
     90% { opacity: 1; }
     100% { opacity: 0; }
 }
+
+.chat-response {
+    background-color: #5567E5;  /* Same blue as your primary buttons */
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chat-response pre {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    color: white;
+}
+
+.chat-response code {
+    color: #e9ecef;
+}
+
+/* Add hover effect */
+.chat-response:hover {
+    background-color: #0056b3;  /* Darker blue on hover */
+    transition: background-color 0.2s ease;
+}
 </style>
 
 <div id="popupMessage" class="popup-message"></div>
@@ -387,5 +414,12 @@ document.getElementById('resetButton').addEventListener('click', function() {
         });
     }
 });
+
+function displayResponse(response) {
+    const chatResponse = document.createElement('div');
+    chatResponse.className = 'chat-response';
+    chatResponse.innerHTML = response;
+    document.getElementById('chat-responses').appendChild(chatResponse);
+}
 </script>
 {% endblock %}
