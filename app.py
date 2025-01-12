@@ -15,6 +15,8 @@ import boto3
 from botocore.exceptions import ClientError
 import threading
 from werkzeug.utils import secure_filename
+import tempfile
+import textwrap
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -433,20 +435,69 @@ def upload_file():
             logger.info(f"Processing file: {filename}")
             
             # Upload to S3
+            logger.info(f"Starting S3 upload for {filename}")
             if not upload_file_to_s3(file, filename):
                 logger.error("Failed to upload to S3")
                 return jsonify({'success': False, 'message': 'Failed to upload to S3'})
             
-            logger.info("File uploaded to S3 successfully")
+            logger.info("S3 upload successful")
             
-            # Process the file for Pinecone
-            success = process_file(filename)
-            if success:
-                logger.info("File processed successfully")
-                return jsonify({'success': True, 'message': 'File uploaded and processed successfully'})
-            else:
-                logger.error("Failed to process file")
-                return jsonify({'success': False, 'message': 'Failed to process file'})
+            # Process for Pinecone
+            logger.info("Starting Pinecone processing")
+            try:
+                # Get the file from S3
+                s3_client = boto3.client('s3')
+                bucket_name = os.getenv('S3_BUCKET_NAME')
+                
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    logger.info(f"Downloading from S3: {filename}")
+                    s3_client.download_fileobj(bucket_name, filename, temp_file)
+                    temp_file.seek(0)
+                    
+                    logger.info("Creating PDF reader")
+                    pdf_reader = PyPDF2.PdfReader(temp_file.name)
+                    text_chunks = []
+                    
+                    logger.info("Extracting text from PDF")
+                    for page_num, page in enumerate(pdf_reader.pages):
+                        text = page.extract_text()
+                        chunks = textwrap.wrap(text, 1000)
+                        text_chunks.extend(chunks)
+                        logger.info(f"Processed page {page_num + 1}, got {len(chunks)} chunks")
+                    
+                    logger.info(f"Total chunks to process: {len(text_chunks)}")
+                    
+                    # Initialize Pinecone
+                    logger.info("Initializing Pinecone")
+                    pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+                    index = pc.Index(os.getenv('PINECONE_INDEX_NAME'))
+                    
+                    # Create embeddings and upload to Pinecone
+                    for i, chunk in enumerate(text_chunks):
+                        logger.info(f"Processing chunk {i + 1}/{len(text_chunks)}")
+                        embedding = get_embedding(chunk)
+                        
+                        # Upload to Pinecone
+                        index.upsert(
+                            vectors=[{
+                                'id': f"{filename}-chunk-{i}",
+                                'values': embedding,
+                                'metadata': {
+                                    'text': chunk,
+                                    'filename': filename
+                                }
+                            }]
+                        )
+                        logger.info(f"Uploaded chunk {i + 1} to Pinecone")
+                    
+                    os.unlink(temp_file.name)
+                    logger.info("File processing completed successfully")
+                    return jsonify({'success': True, 'message': 'File uploaded and processed successfully'})
+                    
+            except Exception as e:
+                logger.error(f"Error processing file for Pinecone: {str(e)}")
+                return jsonify({'success': False, 'message': f'Failed to process file: {str(e)}'})
+                
     except Exception as e:
         logger.error(f"Upload error: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
@@ -707,22 +758,47 @@ def get_documents():
 @app.route('/delete_document/<filename>', methods=['DELETE'])
 def delete_document(filename):
     try:
-        # Delete from filesystem
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        logger.info(f"Attempting to delete document: {filename}")
         
         # Delete from S3
-        delete_from_s3(filename)
-        
+        try:
+            s3_client = boto3.client('s3')
+            s3_client.delete_object(
+                Bucket=os.getenv('S3_BUCKET_NAME'),
+                Key=filename
+            )
+            logger.info(f"Deleted {filename} from S3")
+        except Exception as e:
+            logger.error(f"Error deleting from S3: {str(e)}")
+            return jsonify({'success': False, 'message': f'Failed to delete from S3: {str(e)}'}), 500
+
         # Delete from Pinecone
-        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index = pc.Index('quickstart')
-        index.delete(filter={"source": filename})
-        
+        try:
+            pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+            index = pc.Index(os.getenv('PINECONE_INDEX_NAME'))
+            
+            # Delete all chunks for this file
+            # First, get all vector IDs that start with the filename
+            vector_ids = [f"{filename}-chunk-{i}" for i in range(1000)]  # Adjust range as needed
+            
+            # Delete vectors in batches
+            batch_size = 100
+            for i in range(0, len(vector_ids), batch_size):
+                batch = vector_ids[i:i + batch_size]
+                try:
+                    index.delete(ids=batch)
+                except Exception as e:
+                    logger.warning(f"Error deleting batch from Pinecone: {str(e)}")
+                    
+            logger.info(f"Deleted vectors for {filename} from Pinecone")
+        except Exception as e:
+            logger.error(f"Error deleting from Pinecone: {str(e)}")
+            return jsonify({'success': False, 'message': f'Failed to delete from Pinecone: {str(e)}'}), 500
+
         return jsonify({'success': True, 'message': 'Document deleted successfully'})
+        
     except Exception as e:
-        logger.error(f"Error deleting document: {str(e)}")
+        logger.error(f"Delete error: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/reset_database', methods=['POST'])
