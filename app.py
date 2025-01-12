@@ -13,6 +13,7 @@ from openai import OpenAI
 import time
 import boto3
 from botocore.exceptions import ClientError
+import threading
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -43,17 +44,40 @@ logger = logging.getLogger(__name__)
 # Add these debug prints right after your imports
 logger.info("Starting application initialization...")
 
-def init_pinecone():
-    try:
-        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        # Get index name from environment variable
-        index_name = os.getenv('PINECONE_INDEX_NAME')  # Remove 'quickstart' default
-        logger.info(f"Initializing Pinecone with index: {index_name}")
-        
-        # Check if index exists
-        existing_indexes = pc.list_indexes().names()
-        
-        if index_name not in existing_indexes:
+# At the top of your file, add a flag to prevent multiple initializations
+initialization_lock = threading.Lock()
+initialization_done = False
+
+# Replace the initialization code
+try:
+    with initialization_lock:
+        if not initialization_done:
+            logger.info("Loading environment variables...")
+            load_dotenv()
+            
+            logger.info("Checking Pinecone API key...")
+            pinecone_api_key = os.getenv('PINECONE_API_KEY')
+            if not pinecone_api_key:
+                logger.error("Pinecone API key not found in environment variables")
+                raise ValueError("Pinecone API key is not set")
+            
+            logger.info("Initializing Pinecone...")
+            pc = Pinecone(api_key=pinecone_api_key)
+            logger.info("Pinecone initialized successfully")
+            
+            logger.info("Setting up Pinecone index...")
+            index_name = os.getenv('PINECONE_INDEX_NAME')
+            
+            # Only try to delete if the index exists
+            existing_indexes = pc.list_indexes().names()
+            if index_name in existing_indexes:
+                try:
+                    logger.info(f"Deleting existing index: {index_name}")
+                    pc.delete_index(index_name)
+                    time.sleep(5)  # Wait for deletion to complete
+                except Exception as e:
+                    logger.warning(f"Error deleting index: {str(e)}")
+            
             logger.info(f"Creating new index: {index_name}")
             pc.create_index(
                 name=index_name,
@@ -64,72 +88,16 @@ def init_pinecone():
                     region='us-east-1'
                 )
             )
-            # Wait for index to be ready
-            import time
-            time.sleep(10)  # Give the index time to initialize
-            
-        # Verify index is ready
-        index = pc.Index(index_name)
-        # Test the connection
-        try:
-            index.describe_index_stats()
-            logger.info("Index is ready")
-        except Exception as e:
-            logger.error(f"Index not ready: {str(e)}")
-            raise
-            
-        return index
-    except Exception as e:
-        logger.error(f"Error initializing Pinecone: {str(e)}")
-        raise
+            logger.info("Index created successfully")
+            initialization_done = True
+except Exception as e:
+    logger.error(f"Error during initialization: {str(e)}")
+    raise
 
 # Remove any logging of API keys
 logger.info("Initializing application...")
 logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
-logger.info(f"Pinecone Index Name: {os.getenv('PINECONE_INDEX_NAME', 'quickstart')}")
-
-try:
-    logger.info("Loading environment variables...")
-    load_dotenv()
-    
-    logger.info("Checking Pinecone API key...")
-    pinecone_api_key = os.getenv('PINECONE_API_KEY')
-    if not pinecone_api_key:
-        logger.error("Pinecone API key not found in environment variables")
-        raise ValueError("Pinecone API key is not set")
-    
-    logger.info("Initializing Pinecone...")
-    pc = Pinecone(api_key=pinecone_api_key)
-    logger.info("Pinecone initialized successfully")
-    
-    logger.info("Setting up Pinecone index...")
-    index_name = os.getenv('PINECONE_INDEX_NAME')
-    
-    # Only try to delete if the index exists
-    existing_indexes = pc.list_indexes().names()
-    if index_name in existing_indexes:
-        try:
-            logger.info(f"Deleting existing index: {index_name}")
-            pc.delete_index(index_name)
-            time.sleep(5)  # Wait for deletion to complete
-        except Exception as e:
-            logger.warning(f"Error deleting index: {str(e)}")
-            # Continue anyway as we'll create a new one
-    
-    logger.info(f"Creating new index: {index_name}")
-    pc.create_index(
-        name=index_name,
-        dimension=1536,
-        metric='cosine',
-        spec=ServerlessSpec(
-            cloud='aws',
-            region='us-east-1'
-        )
-    )
-    logger.info("Index created successfully")
-except Exception as e:
-    logger.error(f"Error during initialization: {str(e)}")
-    raise
+logger.info(f"Pinecone Index Name: {os.getenv('PINECONE_INDEX_NAME')}")
 
 print("Pinecone API Key:", pinecone_api_key)
 
