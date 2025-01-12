@@ -77,12 +77,13 @@ def create_app():
     app = Flask(__name__, static_url_path='/static', static_folder='static')
     app.secret_key = 'your-secret-key-here'
 
-    # PostgreSQL configuration
-    database_url = os.environ.get('DATABASE_URL')
+    # Use Heroku's DATABASE_URL environment variable if available, otherwise use local database
+    database_url = os.getenv('DATABASE_URL')
     if database_url and database_url.startswith('postgres://'):
+        # Heroku's postgres:// needs to be updated to postgresql://
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost/smart'
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost/smart'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
