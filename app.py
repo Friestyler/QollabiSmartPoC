@@ -14,6 +14,7 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 import threading
+from werkzeug.utils import secure_filename
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -47,6 +48,13 @@ logger.info("Starting application initialization...")
 # At the top of your file, add a flag to prevent multiple initializations
 initialization_lock = threading.Lock()
 initialization_done = False
+
+# Add this near the top of your file with other configurations
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'doc', 'docx', 'xlsx', 'xls', 'csv'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Replace the initialization code
 try:
@@ -171,35 +179,39 @@ class DemoSettings(db.Model):
 s3_client = boto3.client(
     's3',
     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+    region_name='us-east-1'  # or your preferred region
 )
 
-def upload_to_s3(file_path, filename):
-    """Upload a file to S3"""
+def upload_file_to_s3(file_data, filename):
     try:
         bucket_name = os.getenv('S3_BUCKET_NAME')
-        if not bucket_name:
-            logger.error("S3_BUCKET_NAME not set in environment variables")
-            return False
-            
-        if not os.getenv('AWS_ACCESS_KEY_ID') or not os.getenv('AWS_SECRET_ACCESS_KEY'):
-            logger.error("AWS credentials not set in environment variables")
-            return False
-
-        logger.info(f"Attempting to upload {filename} to S3 bucket: {bucket_name}")
-        s3_client.upload_file(
-            file_path, 
-            bucket_name, 
+        logger.info(f"Uploading {filename} to S3 bucket {bucket_name}")
+        s3_client.upload_fileobj(
+            file_data,
+            bucket_name,
             filename
         )
-        logger.info(f"Successfully uploaded {filename} to S3")
         return True
-    except ClientError as e:
+    except Exception as e:
         logger.error(f"Error uploading to S3: {str(e)}")
         return False
+
+def get_documents_from_s3():
+    try:
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        documents = []
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                documents.append({
+                    'filename': obj['Key'],
+                    'upload_date': obj['LastModified'].isoformat()
+                })
+        return documents
     except Exception as e:
-        logger.error(f"Unexpected error uploading to S3: {str(e)}")
-        return False
+        logger.error(f"Error listing S3 objects: {str(e)}")
+        return []
 
 def download_from_s3(filename):
     """Download a file from S3"""
@@ -406,47 +418,38 @@ def navigation():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'No file part'})
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'message': 'No selected file'})
-    
-    if file and file.filename.endswith('.pdf'):
-        try:
-            logger.info(f"Starting upload process for {file.filename}")
-            
-            # Create uploads directory if it doesn't exist
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            
-            filename = file.filename
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            logger.info(f"Saved file locally to {file_path}")
+    try:
+        if 'file' not in request.files:
+            logger.error("No file part in request")
+            return jsonify({'success': False, 'message': 'No file part'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            logger.error("No selected file")
+            return jsonify({'success': False, 'message': 'No selected file'})
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            logger.info(f"Processing file: {filename}")
             
             # Upload to S3
-            if upload_to_s3(file_path, filename):
-                logger.info("Starting document processing...")
-                if process_file(filename):
-                    logger.info("Document successfully processed")
-                    return jsonify({
-                        'success': True, 
-                        'message': 'File successfully uploaded to S3 and processed',
-                        'location': 'S3'
-                    })
-                else:
-                    logger.error("Failed to process document")
-            else:
+            if not upload_file_to_s3(file, filename):
                 logger.error("Failed to upload to S3")
+                return jsonify({'success': False, 'message': 'Failed to upload to S3'})
             
-            return jsonify({'success': False, 'message': 'Error processing file'})
-                
-        except Exception as e:
-            logger.error(f"Error in upload: {str(e)}")
-            return jsonify({'success': False, 'message': 'Error uploading file: ' + str(e)})
-    else:
-        return jsonify({'success': False, 'message': 'Only PDF files are allowed'})
+            logger.info("File uploaded to S3 successfully")
+            
+            # Process the file for Pinecone
+            success = process_file(filename)
+            if success:
+                logger.info("File processed successfully")
+                return jsonify({'success': True, 'message': 'File uploaded and processed successfully'})
+            else:
+                logger.error("Failed to process file")
+                return jsonify({'success': False, 'message': 'Failed to process file'})
+    except Exception as e:
+        logger.error(f"Upload error: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 def process_file(filename):
     try:
@@ -692,45 +695,11 @@ def get_demo_settings():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get_documents')
+@app.route('/get_documents', methods=['GET'])
 def get_documents():
     try:
-        documents = set()
-        
-        # Get local files
-        upload_folder = app.config['UPLOAD_FOLDER']
-        if os.path.exists(upload_folder):
-            for filename in os.listdir(upload_folder):
-                if filename.endswith('.pdf'):
-                    documents.add(filename)
-        
-        # Get files from Pinecone
-        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index = pc.Index('quickstart')
-        
-        # Query for all vectors and get unique filenames from metadata
-        results = index.query(
-            vector=[0] * 1536,  # Dummy vector to get all documents
-            top_k=10000,
-            include_metadata=True
-        )
-        
-        # Add filenames from Pinecone metadata
-        for match in results.matches:
-            if 'source' in match.metadata:
-                documents.add(match.metadata['source'])
-        
-        # Convert to list of dictionaries with file info
-        document_list = []
-        for filename in documents:
-            file_path = os.path.join(upload_folder, filename)
-            document_list.append({
-                'filename': filename,
-                'upload_date': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat() if os.path.exists(file_path) else 'Unknown',
-                'stored_in_pinecone': True
-            })
-        
-        return jsonify(document_list)
+        documents = get_documents_from_s3()
+        return jsonify(documents)
     except Exception as e:
         logger.error(f"Error getting documents: {str(e)}")
         return jsonify({'error': str(e)}), 500
