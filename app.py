@@ -46,10 +46,14 @@ logger.info("Starting application initialization...")
 def init_pinecone():
     try:
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index_name = os.getenv('PINECONE_INDEX_NAME', 'quickstart')
+        # Get index name from environment variable
+        index_name = os.getenv('PINECONE_INDEX_NAME')  # Remove 'quickstart' default
+        logger.info(f"Initializing Pinecone with index: {index_name}")
         
-        # Check if index exists before trying to create it
-        if index_name not in pc.list_indexes().names():
+        # Check if index exists
+        existing_indexes = pc.list_indexes().names()
+        
+        if index_name not in existing_indexes:
             logger.info(f"Creating new index: {index_name}")
             pc.create_index(
                 name=index_name,
@@ -60,15 +64,26 @@ def init_pinecone():
                     region='us-east-1'
                 )
             )
-        else:
-            logger.info(f"Index {index_name} already exists")
-        
-        return pc.Index(index_name)
+            # Wait for index to be ready
+            import time
+            time.sleep(10)  # Give the index time to initialize
+            
+        # Verify index is ready
+        index = pc.Index(index_name)
+        # Test the connection
+        try:
+            index.describe_index_stats()
+            logger.info("Index is ready")
+        except Exception as e:
+            logger.error(f"Index not ready: {str(e)}")
+            raise
+            
+        return index
     except Exception as e:
         logger.error(f"Error initializing Pinecone: {str(e)}")
         raise
 
-# Remove any debug logging of API keys
+# Remove any logging of API keys
 logger.info("Initializing application...")
 logger.info(f"S3 Bucket Name: {os.getenv('S3_BUCKET_NAME')}")
 logger.info(f"Pinecone Index Name: {os.getenv('PINECONE_INDEX_NAME', 'quickstart')}")
@@ -88,7 +103,7 @@ try:
     logger.info("Pinecone initialized successfully")
     
     logger.info("Setting up Pinecone index...")
-    index_name = 'quickstart'
+    index_name = os.getenv('PINECONE_INDEX_NAME')  # Remove hardcoded 'quickstart'
     if index_name in pc.list_indexes().names():
         logger.info(f"Deleting existing index: {index_name}")
         pc.delete_index(index_name)
@@ -96,7 +111,7 @@ try:
     logger.info(f"Creating new index: {index_name}")
     pc.create_index(
         name=index_name,
-        dimension=1536,  # dimensionality of text-embedding-ada-002
+        dimension=1536,
         metric='cosine',
         spec=ServerlessSpec(
             cloud='aws',
@@ -484,16 +499,15 @@ def process_file(filename):
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
         
         # Create or get index
-        index_name = "quickstart"
+        index_name = os.getenv('PINECONE_INDEX_NAME')  # Use environment variable
         try:
-            # Try to get the index
             index = pc.Index(index_name)
             logger.info("Using existing index")
         except Exception:
             logger.info(f"Creating new index: {index_name}")
             pc.create_index(
                 name=index_name,
-                dimension=1536,  # OpenAI embedding dimension
+                dimension=1536,
                 metric="cosine",
                 spec=ServerlessSpec(
                     cloud='aws',
@@ -570,7 +584,7 @@ def chat():
         # Query Pinecone
         logger.info("Initializing Pinecone...")
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index = pc.Index('quickstart')
+        index = pc.Index(os.getenv('PINECONE_INDEX_NAME'))  # Use environment variable
         
         # Search for relevant context
         logger.info("Querying Pinecone index...")
