@@ -78,23 +78,27 @@ try:
             logger.info("Setting up Pinecone index...")
             index_name = os.getenv('PINECONE_INDEX_NAME')
             
-            # Check if index exists but DON'T try to delete it
+            # Only try to delete if the index exists
             existing_indexes = pc.list_indexes().names()
-            if index_name not in existing_indexes:
-                logger.info(f"Creating new index: {index_name}")
-                pc.create_index(
-                    name=index_name,
-                    dimension=1536,
-                    metric='cosine',
-                    spec=ServerlessSpec(
-                        cloud='aws',
-                        region='us-east-1'
-                    )
-                )
-                logger.info("Index created successfully")
-            else:
-                logger.info(f"Using existing index: {index_name}")
+            if index_name in existing_indexes:
+                try:
+                    logger.info(f"Deleting existing index: {index_name}")
+                    pc.delete_index(index_name)
+                    time.sleep(5)  # Wait for deletion to complete
+                except Exception as e:
+                    logger.warning(f"Error deleting index: {str(e)}")
             
+            logger.info(f"Creating new index: {index_name}")
+            pc.create_index(
+                name=index_name,
+                dimension=1536,
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
+                )
+            )
+            logger.info("Index created successfully")
             initialization_done = True
 
 except Exception as e:
