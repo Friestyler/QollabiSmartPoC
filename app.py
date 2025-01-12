@@ -5,8 +5,12 @@ from datetime import datetime
 import os
 import openai
 from dotenv import load_dotenv
-from pinecone import Pinecone, ServerlessSpec
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import ServerlessSpec
 import logging
+from PyPDF2 import PdfReader
+from openai import OpenAI
+import time
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -53,50 +57,47 @@ try:
     
     logger.info("Setting up Pinecone index...")
     index_name = 'quickstart'
-    if index_name not in pc.list_indexes().names():
-        logger.info(f"Creating new index: {index_name}")
-        pc.create_index(
-            name=index_name,
-            dimension=2,
-            metric='cosine',
-            spec=ServerlessSpec(
-                cloud='aws',
-                region='us-east-1'
-            )
+    if index_name in pc.list_indexes().names():
+        logger.info(f"Deleting existing index: {index_name}")
+        pc.delete_index(index_name)
+        
+    logger.info(f"Creating new index: {index_name}")
+    pc.create_index(
+        name=index_name,
+        dimension=1536,  # dimensionality of text-embedding-ada-002
+        metric='cosine',
+        spec=ServerlessSpec(
+            cloud='aws',
+            region='us-east-1'
         )
-        logger.info("Index created successfully")
-    else:
-        logger.info("Index already exists")
+    )
+    logger.info("Index created successfully")
 except Exception as e:
     logger.error(f"Error during initialization: {str(e)}")
     raise
 
 print("Pinecone API Key:", pinecone_api_key)
 
-def create_app():
-    app = Flask(__name__, static_url_path='/static', static_folder='static')
-    app.secret_key = 'your-secret-key-here'
+app = Flask(__name__, static_url_path='/static', static_folder='static')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key-here')
 
-    # Use Heroku's DATABASE_URL environment variable if available, otherwise use local database
-    database_url = os.getenv('DATABASE_URL')
-    if database_url and database_url.startswith('postgres://'):
-        # Heroku's postgres:// needs to be updated to postgresql://
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+# Use Heroku's DATABASE_URL environment variable if available, otherwise use local database
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    # Heroku's postgres:// needs to be updated to postgresql://
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost/smart'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost/smart'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
-    # Initialize the application with extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
+# Initialize the application with extensions
+db.init_app(app)
+migrate.init_app(app, db)
 
-    with app.app_context():
-        db.create_all()  # This will create tables
-        
-    return app
-
-app = create_app()
+with app.app_context():
+    db.create_all()  # This will create tables
+    
 
 # Database Models
 class DeGoudseSettings(db.Model):
@@ -328,19 +329,107 @@ def navigation():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        return redirect(request.url)
+        return jsonify({'success': False, 'message': 'No file part'})
+    
     file = request.files['file']
     if file.filename == '':
-        return redirect(request.url)
-    if file:
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
-        # Process the file and update the vector database
-        process_file(file.filename)
-        return redirect(url_for('manage'))
+        return jsonify({'success': False, 'message': 'No selected file'})
+    
+    if file and file.filename.endswith('.pdf'):
+        try:
+            # Create uploads directory if it doesn't exist
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            
+            filename = file.filename
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            logger.info(f"File saved: {filename}")
+            
+            if process_file(filename):
+                return jsonify({'success': True, 'message': 'File successfully uploaded and processed'})
+            else:
+                return jsonify({'success': False, 'message': 'Error processing file'})
+                
+        except Exception as e:
+            logger.error(f"Error in upload: {str(e)}")
+            return jsonify({'success': False, 'message': 'Error uploading file: ' + str(e)})
+    else:
+        return jsonify({'success': False, 'message': 'Only PDF files are allowed'})
 
 def process_file(filename):
-    # Implement logic to process the file and update the vector database
-    pass
+    try:
+        logger.info(f"Processing file: {filename}")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Read the PDF file
+        with open(file_path, 'rb') as file:
+            pdf = PdfReader(file)
+            text = ""
+            for page in pdf.pages:
+                text += page.extract_text()
+        
+        logger.info(f"Extracted text length: {len(text)}")
+        
+        # Split text into smaller chunks
+        chunks = [text[i:i+1000] for i in range(0, len(text), 1000)]
+        logger.info(f"Created {len(chunks)} chunks")
+        
+        # Initialize Pinecone
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        
+        # Create or get index
+        index_name = "quickstart"
+        try:
+            # Try to get the index
+            index = pc.Index(index_name)
+            logger.info("Using existing index")
+        except Exception:
+            logger.info(f"Creating new index: {index_name}")
+            pc.create_index(
+                name=index_name,
+                dimension=1536,  # OpenAI embedding dimension
+                metric="cosine",
+                spec=ServerlessSpec(
+                    cloud='aws',
+                    region='us-east-1'
+                )
+            )
+            time.sleep(5)  # Wait for index to be ready
+            index = pc.Index(index_name)
+        
+        # Get embeddings using OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        records = []
+        
+        for i, chunk in enumerate(chunks):
+            logger.info(f"Processing chunk {i+1}/{len(chunks)}")
+            response = client.embeddings.create(
+                input=chunk,
+                model="text-embedding-ada-002"
+            )
+            embedding = response.data[0].embedding
+            
+            records.append({
+                "id": f"{filename}-chunk-{i}",
+                "values": embedding,
+                "metadata": {"text": chunk, "source": filename}
+            })
+        
+        # Upsert in batches of 100
+        batch_size = 100
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i + batch_size]
+            logger.info(f"Upserting batch {i//batch_size + 1}")
+            index.upsert(
+                vectors=batch
+            )
+        
+        logger.info("File processing complete")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error processing file: {str(e)}")
+        return False
 
 @app.route('/update_settings', methods=['POST'])
 def update_settings():
@@ -352,25 +441,93 @@ def update_settings():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
-    query = data.get('query')
-    response = generate_response(query)
-    return jsonify({'response': response})
+    try:
+        user_message = request.json.get('message', '')
+        if not user_message:
+            return jsonify({'error': 'No message provided'}), 400
 
-def generate_response(query):
-    # Retrieve relevant documents from the vector database
-    relevant_docs = retrieve_documents(query)
-    
-    # Use OpenAI to generate a response using the chat model
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # Use the chat model
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": query}
-        ],
-        max_tokens=150
-    )
-    return response.choices[0].message['content'].strip()
+        logger.info(f"Received user message: {user_message}")
+
+        # Initialize OpenAI client
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        logger.info("OpenAI client initialized")
+        
+        # Get embedding for the user's question
+        logger.info("Getting embedding for user question...")
+        embedding_response = client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=user_message
+        )
+        question_embedding = embedding_response.data[0].embedding
+        logger.info("Embedding created successfully")
+
+        # Query Pinecone
+        logger.info("Initializing Pinecone...")
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index = pc.Index('quickstart')
+        
+        # Search for relevant context
+        logger.info("Querying Pinecone index...")
+        query_response = index.query(
+            vector=question_embedding,
+            top_k=3,
+            include_metadata=True
+        )
+        logger.info(f"Pinecone query response: {query_response}")
+
+        # Extract relevant context from the matches
+        contexts = []
+        for match in query_response.matches:
+            logger.info(f"Processing match with score: {match.score if hasattr(match, 'score') else 'no score'}")
+            if hasattr(match, 'score') and match.score > 0.7:  # Only use relevant matches
+                if hasattr(match, 'metadata') and 'text' in match.metadata:
+                    contexts.append(match.metadata['text'])
+                    logger.info(f"Added context from match: {match.metadata['text'][:100]}...")
+
+        # Prepare the context string
+        context_text = "\n".join(contexts) if contexts else ""
+        logger.info(f"Final context length: {len(context_text)} characters")
+        logger.info(f"Context used: {context_text[:200]}...")  # Log first 200 chars of context
+
+        # Prepare the messages for GPT
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Use the provided context to answer questions, and if you're not sure about something, say so."}
+        ]
+
+        if context_text:
+            prompt = f"Using this context:\n\n{context_text}\n\nPlease answer this question: {user_message}"
+            logger.info(f"Using context in prompt. Prompt length: {len(prompt)}")
+        else:
+            prompt = f"Please answer this question: {user_message}\n\nNote: If you need specific information from documents to answer this question, please let me know."
+            logger.info("No context available for this query")
+
+        messages.append({"role": "user", "content": prompt})
+
+        # Get response from GPT
+        logger.info("Sending request to GPT...")
+        chat_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=500
+        )
+        logger.info("Received response from GPT")
+
+        response_text = chat_response.choices[0].message.content
+        logger.info(f"Final response: {response_text[:200]}...")  # Log first 200 chars of response
+
+        return jsonify({
+            'response': response_text,
+            'context_used': bool(contexts),
+            'debug_info': {
+                'contexts_found': len(contexts),
+                'context_length': len(context_text) if context_text else 0
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 def retrieve_documents(query):
     # Implement logic to retrieve documents from the vector database
@@ -432,6 +589,108 @@ def get_demo_settings():
         } for s in settings])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/get_documents')
+def get_documents():
+    try:
+        documents = set()
+        
+        # Get local files
+        upload_folder = app.config['UPLOAD_FOLDER']
+        if os.path.exists(upload_folder):
+            for filename in os.listdir(upload_folder):
+                if filename.endswith('.pdf'):
+                    documents.add(filename)
+        
+        # Get files from Pinecone
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index = pc.Index('quickstart')
+        
+        # Query for all vectors and get unique filenames from metadata
+        results = index.query(
+            vector=[0] * 1536,  # Dummy vector to get all documents
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        # Add filenames from Pinecone metadata
+        for match in results.matches:
+            if 'source' in match.metadata:
+                documents.add(match.metadata['source'])
+        
+        # Convert to list of dictionaries with file info
+        document_list = []
+        for filename in documents:
+            file_path = os.path.join(upload_folder, filename)
+            document_list.append({
+                'filename': filename,
+                'upload_date': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat() if os.path.exists(file_path) else 'Unknown',
+                'stored_in_pinecone': True
+            })
+        
+        return jsonify(document_list)
+    except Exception as e:
+        logger.error(f"Error getting documents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/delete_document/<filename>', methods=['DELETE'])
+def delete_document(filename):
+    try:
+        # Delete from filesystem first
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"Deleted file: {filename}")
+        
+        # Delete from Pinecone
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index = pc.Index('quickstart')
+        
+        # Delete vectors by filtering on the filename
+        logger.info(f"Deleting vectors for file: {filename}")
+        index.delete(
+            filter={"source": filename}
+        )
+        
+        return jsonify({'success': True, 'message': 'Document deleted successfully'})
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error deleting document: ' + str(e)}), 500
+
+@app.route('/reset_database', methods=['POST'])
+def reset_database():
+    try:
+        # Clear uploads folder
+        upload_folder = app.config['UPLOAD_FOLDER']
+        if os.path.exists(upload_folder):
+            for filename in os.listdir(upload_folder):
+                file_path = os.path.join(upload_folder, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+        
+        # Reset Pinecone index
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index_name = "quickstart"
+        
+        # Delete existing index if it exists
+        if index_name in pc.list_indexes().names():
+            pc.delete_index(index_name)
+            
+        # Create new index
+        pc.create_index(
+            name=index_name,
+            dimension=1536,
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region='us-east-1'
+            )
+        )
+        
+        return jsonify({'success': True, 'message': 'Database reset successfully'})
+    except Exception as e:
+        logger.error(f"Error resetting database: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

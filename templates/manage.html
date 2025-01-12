@@ -8,20 +8,59 @@
 
 <div id="partnerPilot" class="tab-content" style="display: block;">
     <h2>Partner Pilot Settings</h2>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <label for="file">Upload Document:</label>
-        <input type="file" name="file" id="file">
-        <button type="submit">Upload</button>
-    </form>
-    <form action="/update_settings" method="post">
-        <label for="openai_key">OpenAI API Key:</label>
-        <input type="text" name="openai_key" id="openai_key" value="{{ openai_key }}">
+    
+    <!-- File upload section -->
+    <div class="upload-section mb-4">
+        <h3>Upload Documents</h3>
+        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="mb-3">
+            <div class="mb-3">
+                <label for="file" class="form-label">Select PDF Document:</label>
+                <input type="file" name="file" id="file" class="form-control" accept=".pdf">
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
         
-        <label for="pinecone_key">Pinecone API Key:</label>
-        <input type="text" name="pinecone_key" id="pinecone_key" value="{{ pinecone_key }}">
+        <!-- Progress bar (hidden by default) -->
+        <div id="uploadProgress" class="progress mb-3" style="display: none;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 aria-valuenow="0" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100" 
+                 style="width: 0%">
+                 0%
+            </div>
+        </div>
         
-        <button type="submit">Save Settings</button>
-    </form>
+        <!-- Status message -->
+        <div id="uploadStatus" class="alert" style="display: none;"></div>
+    </div>
+    
+    <!-- Add this near your upload form -->
+    <div class="mb-3">
+        <button id="resetButton" class="btn btn-danger">Reset Database</button>
+    </div>
+    
+    <!-- Add this after your upload form in the partner pilot tab -->
+    <div class="uploaded-documents mt-4">
+        <h3>Uploaded Documents</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Upload Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="documentsList">
+                    <!-- Documents will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Rest of your partner pilot content -->
 </div>
 
 <div id="reports" class="tab-content" style="display: none;">
@@ -229,5 +268,124 @@ function refreshTable() {
             showPopupMessage('Error refreshing table', true);
         });
 }
+
+document.getElementById('uploadForm').onsubmit = function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const progressBar = document.querySelector('#uploadProgress');
+    const progressBarInner = progressBar.querySelector('.progress-bar');
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    // Show progress bar
+    progressBar.style.display = 'block';
+    statusDiv.style.display = 'none';
+    
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.className = 'alert alert-success';
+            statusDiv.textContent = 'File successfully uploaded and processed';
+            loadDocuments();  // Refresh the list after successful upload
+        } else {
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.textContent = data.message || 'Error processing file';
+        }
+        statusDiv.style.display = 'block';
+        progressBar.style.display = 'none';
+    })
+    .catch(error => {
+        statusDiv.className = 'alert alert-danger';
+        statusDiv.textContent = 'Error uploading file';
+        statusDiv.style.display = 'block';
+        progressBar.style.display = 'none';
+    });
+    
+    // Simulate progress (since we can't get real progress for processing)
+    let progress = 0;
+    const fileSize = this.querySelector('input[type="file"]').files[0].size;
+    const increment = fileSize > 1000000 ? 2 : 5; // Slower progress for larger files
+    const interval = setInterval(() => {
+        progress += increment;
+        if (progress > 90) clearInterval(interval);
+        progressBarInner.style.width = progress + '%';
+        progressBarInner.textContent = progress + '%';
+        progressBarInner.setAttribute('aria-valuenow', progress);
+    }, 500);
+};
+
+function loadDocuments() {
+    fetch('/get_documents')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('documentsList');
+            tbody.innerHTML = '';
+            
+            data.forEach(doc => {
+                const row = `
+                    <tr>
+                        <td>${doc.filename}</td>
+                        <td>${new Date(doc.upload_date).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDocument('${doc.filename}')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        })
+        .catch(error => console.error('Error loading documents:', error));
+}
+
+function deleteDocument(filename) {
+    if (confirm('Are you sure you want to delete this document?')) {
+        fetch(`/delete_document/${encodeURIComponent(filename)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadDocuments();  // Refresh the list
+                showPopupMessage('Document deleted successfully');
+            } else {
+                showPopupMessage('Error deleting document: ' + data.message, true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showPopupMessage('Error deleting document', true);
+        });
+    }
+}
+
+// Load documents when the page loads
+document.addEventListener('DOMContentLoaded', loadDocuments);
+
+document.getElementById('resetButton').addEventListener('click', function() {
+    if (confirm('Are you sure you want to reset the database? This will delete all uploaded documents and their vectors.')) {
+        fetch('/reset_database', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Database reset successfully');
+                location.reload();
+            } else {
+                alert('Error resetting database: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resetting database');
+        });
+    }
+});
 </script>
 {% endblock %}
