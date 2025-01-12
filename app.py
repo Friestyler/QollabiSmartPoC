@@ -804,7 +804,7 @@ def delete_document(filename):
 @app.route('/reset_database', methods=['POST'])
 def reset_database():
     try:
-        # Clear uploads folder
+        # Keep existing upload folder clearing
         upload_folder = app.config['UPLOAD_FOLDER']
         if os.path.exists(upload_folder):
             for filename in os.listdir(upload_folder):
@@ -812,24 +812,26 @@ def reset_database():
                 if os.path.isfile(file_path):
                     os.remove(file_path)
         
-        # Reset Pinecone index
-        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index_name = "quickstart"
+        # Add S3 clearing
+        logger.info("Clearing S3 bucket...")
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        s3_client = boto3.client('s3')
+        objects = s3_client.list_objects_v2(Bucket=bucket_name)
+        if 'Contents' in objects:
+            for obj in objects['Contents']:
+                s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'])
+                logger.info(f"Deleted {obj['Key']} from S3")
         
-        # Delete existing index if it exists
+        # Keep existing Pinecone reset
+        pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+        index_name = os.getenv('PINECONE_INDEX_NAME')
+        
+        # Keep existing index handling
         if index_name in pc.list_indexes().names():
-            pc.delete_index(index_name)
-            
-        # Create new index
-        pc.create_index(
-            name=index_name,
-            dimension=1536,
-            metric='cosine',
-            spec=ServerlessSpec(
-                cloud='aws',
-                region='us-east-1'
-            )
-        )
+            logger.info(f"Clearing index: {index_name}")
+            index = pc.Index(index_name)
+            index.delete(delete_all=True)
+            logger.info("Index cleared successfully")
         
         return jsonify({'success': True, 'message': 'Database reset successfully'})
     except Exception as e:
