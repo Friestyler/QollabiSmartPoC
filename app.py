@@ -75,13 +75,14 @@ print("Pinecone API Key:", pinecone_api_key)
 
 def create_app():
     app = Flask(__name__, static_url_path='/static', static_folder='static')
+    app.secret_key = 'your-secret-key-here'
 
     # PostgreSQL configuration
     database_url = os.environ.get('DATABASE_URL')
     if database_url and database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://friepetre:friestyler@localhost:5432/qollabi_smart'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost/smart'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -386,12 +387,10 @@ def update_demo_settings():
         )
         db.session.add(demo_setting)
         db.session.commit()
-        flash('Demo settings saved successfully', 'success')
+        return jsonify({'success': True, 'message': 'Settings saved successfully'})
     except Exception as e:
         db.session.rollback()
-        flash(f'Error saving demo settings: {str(e)}', 'error')
-    
-    return redirect(url_for('manage'))
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/edit_demo_setting/<int:setting_id>', methods=['POST'])
 def edit_demo_setting(setting_id):

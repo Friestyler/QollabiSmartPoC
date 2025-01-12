@@ -201,7 +201,6 @@ document.getElementById('demoSettingsForm').addEventListener('submit', function(
     });
 });
 
-// Add this function to refresh the table
 function refreshTable() {
     fetch('/get_demo_settings')
         .then(response => response.json())
