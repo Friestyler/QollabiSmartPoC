@@ -17,6 +17,7 @@ import threading
 from werkzeug.utils import secure_filename
 import tempfile
 import textwrap
+import PyPDF2
 
 # Initialize extensions first, before creating the app
 db = SQLAlchemy()
@@ -804,15 +805,7 @@ def delete_document(filename):
 @app.route('/reset_database', methods=['POST'])
 def reset_database():
     try:
-        # Keep existing upload folder clearing
-        upload_folder = app.config['UPLOAD_FOLDER']
-        if os.path.exists(upload_folder):
-            for filename in os.listdir(upload_folder):
-                file_path = os.path.join(upload_folder, filename)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-        
-        # Add S3 clearing
+        # Clear S3
         logger.info("Clearing S3 bucket...")
         bucket_name = os.getenv('S3_BUCKET_NAME')
         s3_client = boto3.client('s3')
@@ -822,16 +815,20 @@ def reset_database():
                 s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'])
                 logger.info(f"Deleted {obj['Key']} from S3")
         
-        # Keep existing Pinecone reset
+        # Clear Pinecone
+        logger.info("Clearing Pinecone index...")
         pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
         index_name = os.getenv('PINECONE_INDEX_NAME')
         
-        # Keep existing index handling
-        if index_name in pc.list_indexes().names():
-            logger.info(f"Clearing index: {index_name}")
+        try:
             index = pc.Index(index_name)
             index.delete(delete_all=True)
-            logger.info("Index cleared successfully")
+            logger.info("Pinecone index cleared")
+        except Exception as e:
+            logger.warning(f"Error clearing Pinecone index: {str(e)}")
+            # If the error is about namespace not found, we can ignore it
+            if "Namespace not found" not in str(e):
+                raise
         
         return jsonify({'success': True, 'message': 'Database reset successfully'})
     except Exception as e:
