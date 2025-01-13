@@ -380,7 +380,9 @@ def get_baloise_settings():
 def measure():
     # Get all demo settings ordered by section number
     demo_settings = DemoSettings.query.order_by(DemoSettings.section_number).all()
-    return render_template('measure.html', demo_settings=demo_settings)
+    return render_template('measure.html', 
+                         current_page='measure',
+                         demo_settings=demo_settings)
 
 @app.route('/admin')
 def admin():
@@ -388,9 +390,9 @@ def admin():
 
 @app.route('/manage')
 def manage():
-    # Get all demo settings ordered by section number
     demo_settings = DemoSettings.query.order_by(DemoSettings.section_number).all()
     return render_template('manage.html', 
+                         current_page='manage',
                          demo_settings=demo_settings,
                          openai_key=os.getenv('OPENAI_API_KEY'),
                          pinecone_key=os.getenv('PINECONE_API_KEY'))

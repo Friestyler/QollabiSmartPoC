@@ -859,11 +859,6 @@ h3 {
     background-color: #5567E5; /* Blue line color */
 }
 
-.q-nav-menu-item-active {
-    background-color: #D8DFFF; /* Example background color */
-    color: #5567E5; /* Example text color */
-    /* Add any additional styles needed for the active state */
-}
 
 .q-tabs {
     display: flex;
