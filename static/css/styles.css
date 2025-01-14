@@ -809,6 +809,16 @@ h3 {
     border-bottom: 1px solid #D3D8EE;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+}
+.q-header-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #989AB3;
+}
+.q-header-actions {
+    display: flex;
+    align-items: center;
     justify-content: flex-end;
 }
 
