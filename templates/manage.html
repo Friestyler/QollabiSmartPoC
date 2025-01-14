@@ -7,121 +7,134 @@
 </div>
 
 <div id="partnerPilot" class="tab-content" style="display: block;">
-    <h2>Partner Pilot Settings</h2>
-    
-    <!-- File upload section -->
-    <div class="upload-section mb-4">
-        <h3>Upload Documents</h3>
-        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="mb-3">
-            <div class="mb-3">
-                <label for="file" class="form-label">Select PDF Document:</label>
-                <input type="file" name="file" id="file" class="form-control" accept=".pdf">
+    <div class="q-intro-heading-cta">
+        <h2>Partner Pilot Settings</h2>
+    </div>
+    <div class="q-card">
+        <!-- File upload section -->
+        <div class="upload-section mb-4">
+            <h3>Upload Documents</h3>
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="mb-3">
+                <div class="mb-3">
+                    <label for="file" class="form-label">Select PDF Document:</label>
+                    <input type="file" name="file" id="file" class="form-control" accept=".pdf">
+                </div>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+            
+            <!-- Progress bar (hidden by default) -->
+            <div id="uploadProgress" class="progress mb-3" style="display: none;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                    role="progressbar" 
+                    aria-valuenow="0" 
+                    aria-valuemin="0" 
+                    aria-valuemax="100" 
+                    style="width: 0%">
+                    0%
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </form>
-        
-        <!-- Progress bar (hidden by default) -->
-        <div id="uploadProgress" class="progress mb-3" style="display: none;">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                 role="progressbar" 
-                 aria-valuenow="0" 
-                 aria-valuemin="0" 
-                 aria-valuemax="100" 
-                 style="width: 0%">
-                 0%
-            </div>
+            
+            <!-- Status message -->
+            <div id="uploadStatus" class="alert" style="display: none;"></div>
         </div>
         
-        <!-- Status message -->
-        <div id="uploadStatus" class="alert" style="display: none;"></div>
-    </div>
-    
-    <!-- Add this near your upload form -->
-    <div class="mb-3">
-        <button id="resetButton" class="btn btn-danger">Reset Database</button>
-    </div>
-    
-    <!-- Add this after your upload form in the partner pilot tab -->
-    <div class="uploaded-documents mt-4">
-        <h3>Uploaded Documents</h3>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Filename</th>
-                        <th>Upload Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="documentsList">
-                    <!-- Documents will be loaded here -->
-                </tbody>
-            </table>
+        <!-- Add this near your upload form -->
+        <div class="mt-4">
+            <button id="resetButton" class="btn btn-danger">Reset Database</button>
         </div>
     </div>
-    
+    <div class="q-card">
+        <!-- Add this after your upload form in the partner pilot tab -->
+        <div class="uploaded-documents">
+            <h3>Uploaded Documents</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Upload Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="documentsList">
+                        <!-- Documents will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <!-- Rest of your partner pilot content -->
 </div>
 
 <div id="reports" class="tab-content" style="display: none;">
-    <h2>Reports Settings</h2>
-    <div class="container mt-4">
-        <!-- Add New Section Button -->
-        <button class="btn btn-success mb-4" onclick="showAddForm()">Add New Section</button>
-        
+    
+    <div class="container">
+        <div class="q-intro-heading-cta">
+            <h2>Reports Settings</h2>
+            <div class="q-cta-actions">
+                <button class="btn btn-primary" onclick="showAddForm()">Add Report Section</button>
+             </div>
+        </div>
+         
         <!-- Form for both Add and Edit -->
         <form method="POST" id="demoSettingsForm" style="display: none;">
-            <input type="hidden" id="setting_id" name="setting_id">
-            <h4 id="formTitle">Add New Section</h4>
-            <div class="mb-3">
-                <label for="section_number" class="form-label">Section Number</label>
-                <input type="number" class="form-control" id="section_number" name="section_number" required>
+            <div class="q-card">
+                <input type="hidden" id="setting_id" name="setting_id">
+                <h3 id="formTitle">Add New Section</h3>
+                <div class="mb-3">
+                    <label for="section_number" class="form-label">Section Number</label>
+                    <input type="number" class="form-control" id="section_number" name="section_number" required>
+                </div>
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title">
+                </div>
+                <div class="mb-3">
+                    <label for="link" class="form-label">Link</label>
+                    <input type="text" class="form-control" id="link" name="link">
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content</label>
+                    <textarea class="form-control" id="content" name="content" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
             </div>
-            <div class="mb-3">
-                <label for="title" class="form-label">Title</label>
-                <input type="text" class="form-control" id="title" name="title">
-            </div>
-            <div class="mb-3">
-                <label for="link" class="form-label">Link</label>
-                <input type="text" class="form-control" id="link" name="link">
-            </div>
-            <div class="mb-3">
-                <label for="content" class="form-label">Content</label>
-                <textarea class="form-control" id="content" name="content" rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Save</button>
-            <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
         </form>
-
+         
+        
+         <div class="q-card">
+            <div class="">
+                <h3>Existing Sections</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Section</th>
+                            <th>Title</th>
+                            <th>Link</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for setting in demo_settings %}
+                        <tr id="setting-{{ setting.id }}">
+                            <td>{{ setting.section_number }}</td>
+                            <td>{{ setting.title }}</td>
+                            <td>{{ setting.link }}</td>
+                            <td>{{ setting.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editSetting({{ setting.id }})">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSetting({{ setting.id }})">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+         </div>
         <!-- Display existing settings -->
-        <div class="mt-4">
-            <h4>Existing Sections</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Section</th>
-                        <th>Title</th>
-                        <th>Link</th>
-                        <th>Last Updated</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for setting in demo_settings %}
-                    <tr id="setting-{{ setting.id }}">
-                        <td>{{ setting.section_number }}</td>
-                        <td>{{ setting.title }}</td>
-                        <td>{{ setting.link }}</td>
-                        <td>{{ setting.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="editSetting({{ setting.id }})">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteSetting({{ setting.id }})">Delete</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        
     </div>
 </div>
 
