@@ -903,3 +903,33 @@ h3 {
     height: 2px; /* Height of the blue line */
     background-color: #5567E5; /* Blue line color */
 }
+
+
+
+
+.btn {
+    border-radius: 6px;
+    padding: 11px 18px;
+    border: none;
+    cursor: pointer;    
+    font-weight: 600;
+    font-size: 14px;
+    background-color: white;
+    border: 1px solid #D8DFFF;
+    color: #5567E5;
+}
+.btn:hover {
+    background-color: #EFF2FD;
+    border-color: #BCC7FC;
+    color: #3E4DC4;
+}
+.btn-primary {
+    background-color: #5567E5;
+    color: white;
+    border: 1px solid #5567E5;
+}
+.btn-primary:hover {
+    background-color: #3E4DC4;
+    border-color: #3E4DC4;
+    color: white;
+}
