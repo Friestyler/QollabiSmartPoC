@@ -635,22 +635,31 @@ def chat():
         
         # Prepare the messages for GPT with structured format
         messages = [
-            {"role": "system", "content": """You are a helpful assistant. Structure your responses clearly with sections and bullet points.
-            Use the following format:
+            {"role": "system", "content": """You are a helpful assistant. Structure your responses clearly. Keep this html structure, but only use unordered lists in the key points, convert OL in UL.
             
-            ## Summary
-            Brief overview of the answer
-            
-            ### Key Points
-            * Important point 1
-            * Important point 2
-            * Important point 3
-            
-            ### Details
-            Detailed explanation with relevant information
-            
-            ### References
-            * Reference relevant documents or sections if available"""}
+            <div>
+                <h2>Summary</h2>
+                <p>Brief overview of the answer</p>
+            </div>
+            <div>
+                <h3>Key Points</h3>
+                <ul>
+                    <li>Important point 1</li>
+                    <li>Important point 2</li>
+                    <li>Important point 3</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Details</h3>
+                <p>Detailed explanation with relevant information</p>
+            </div>
+            <div>
+                <h3>References</h3>
+                <ul>
+                    <li>Reference relevant documents or sections if available</li>
+                </ul>
+            </div>
+            """}
         ]
 
         if context_text:
